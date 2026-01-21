@@ -1,5 +1,5 @@
 {
-  "name": "product-content-enhancer",
+  "name": "product-content-enhancer-lotz",
   "private": true,
   "scripts": {
     "build": "react-router build",
