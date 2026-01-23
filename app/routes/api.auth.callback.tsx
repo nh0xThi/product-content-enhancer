@@ -13,33 +13,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     await authenticate.admin(request);
     
     // If we reach here, authentication is complete
-    // Get external app URL from environment variable
-    // Defaults to SHOPIFY_APP_URL if EXTERNAL_APP_URL is not set
-    const externalAppUrl = process.env.EXTERNAL_APP_URL || process.env.SHOPIFY_APP_URL;
-    
-    // Get shop parameter from URL if available
+    // After OAuth callback, redirect back to the app
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop");
     const host = url.searchParams.get("host");
     
-    // Build redirect URL
-    let redirectUrl: string;
-    if (externalAppUrl) {
-      // If external URL is provided, use it
-      const targetUrl = new URL(externalAppUrl);
-      if (shop) targetUrl.searchParams.set("shop", shop);
-      if (host) targetUrl.searchParams.set("host", host);
-      redirectUrl = targetUrl.toString();
-    } else {
-      // Default to /app with shop parameter
-      const origin = new URL(request.url).origin;
-      const path = shop ? `/app?shop=${shop}${host ? `&host=${host}` : ''}` : "/app";
-      redirectUrl = `${origin}${path}`;
-    }
+    // Get the app URL (use current request origin for same-domain redirect)
+    const appUrl = process.env.SHOPIFY_APP_URL || url.origin;
+    const appUrlObj = new URL(appUrl);
+    
+    // Redirect to /app route with shop parameter
+    // This is the main app page after authentication
+    const redirectPath = "/app";
+    const redirectUrl = new URL(redirectPath, appUrlObj.origin);
+    
+    // Preserve shop and host parameters
+    if (shop) redirectUrl.searchParams.set("shop", shop);
+    if (host) redirectUrl.searchParams.set("host", host);
     
     // For standalone apps, use standard HTTP redirect
     // React Router requires throwing redirects, not returning them
-    throw redirect(redirectUrl);
+    throw redirect(redirectUrl.toString());
   } catch (error) {
     // Re-throw redirect responses (from authenticate.admin during OAuth or our redirect)
     // React Router will handle them properly
