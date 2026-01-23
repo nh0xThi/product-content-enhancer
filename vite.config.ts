@@ -15,14 +15,14 @@ if (
   delete process.env.HOST;
 }
 
-const host = new URL(process.env.SHOPIFY_APP_URL || "0.0.0.0")
+const host = new URL(process.env.SHOPIFY_APP_URL || "http://localhost")
   .hostname;
 
 let hmrConfig;
-if (host === "0.0.0.0") {
+if (host === "localhost") {
   hmrConfig = {
     protocol: "ws",
-    host: "0.0.0.0",
+    host: "localhost",
     port: 64999,
     clientPort: 64999,
   };
