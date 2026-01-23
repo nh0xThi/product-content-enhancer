@@ -2,38 +2,25 @@ import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig, type UserConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-// Detect environment
-const isRender = process.env.RENDER || process.env.NODE_ENV === 'production';
-
-// === FIXED: Handle both Render and local development ===
-if (isRender) {
-  // On Render, always use production URL
-  process.env.SHOPIFY_APP_URL = "https://product-content-enhancer.onrender.com";
-  process.env.HOST = "https://product-content-enhancer.onrender.com";
-} else {
-  // Original Shopify CLI logic for local development
-  if (
-    process.env.HOST &&
-    (!process.env.SHOPIFY_APP_URL ||
-      process.env.SHOPIFY_APP_URL === process.env.HOST)
-  ) {
-    process.env.SHOPIFY_APP_URL = process.env.HOST;
-    delete process.env.HOST;
-  }
+// Related: https://github.com/remix-run/remix/issues/2835#issuecomment-1144102176
+// Replace the HOST env var with SHOPIFY_APP_URL so that it doesn't break the Vite server.
+// The CLI will eventually stop passing in HOST,
+// so we can remove this workaround after the next major release.
+if (
+  process.env.HOST &&
+  (!process.env.SHOPIFY_APP_URL ||
+    process.env.SHOPIFY_APP_URL === process.env.HOST)
+) {
+  process.env.SHOPIFY_APP_URL = process.env.HOST;
+  delete process.env.HOST;
 }
 
-// Get the app URL - with fallback
-const appUrl = process.env.SHOPIFY_APP_URL || 
-  (isRender 
-    ? "https://product-content-enhancer.onrender.com" 
-    : "http://localhost");
+const host = new URL(process.env.SHOPIFY_APP_URL || "http://localhost")
+  .hostname;
 
-const host = new URL(appUrl).hostname;
-
-// HMR configuration
 let hmrConfig;
-if (host === "localhost" || isRender) {
-  hmrConfig = isRender ? false : {
+if (host === "localhost") {
+  hmrConfig = {
     protocol: "ws",
     host: "localhost",
     port: 64999,
@@ -43,18 +30,21 @@ if (host === "localhost" || isRender) {
   hmrConfig = {
     protocol: "wss",
     host: host,
-    port: parseInt(process.env.FRONTEND_PORT || "8002"),
+    port: parseInt(process.env.FRONTEND_PORT!) || 8002,
     clientPort: 443,
   };
 }
 
 export default defineConfig({
   server: {
-    host: isRender ? '0.0.0.0' : host, // Bind to 0.0.0.0 on Render
     allowedHosts: [host],
+    cors: {
+      preflightContinue: true,
+    },
     port: Number(process.env.PORT || 3000),
     hmr: hmrConfig,
     fs: {
+      // See https://vitejs.dev/config/server-options.html#server-fs-allow for more information
       allow: ["app", "node_modules"],
     },
   },
@@ -66,6 +56,6 @@ export default defineConfig({
     assetsInlineLimit: 0,
   },
   optimizeDeps: {
-    include: ["@prisma/client", "@shopify/app-bridge-react"],
+    include: ["@shopify/app-bridge-react"],
   },
 }) satisfies UserConfig;
