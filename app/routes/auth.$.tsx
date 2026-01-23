@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
+import { useLoaderData } from "react-router";
+import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
@@ -29,11 +32,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (shop) redirectUrl.searchParams.set("shop", shop);
     if (host) redirectUrl.searchParams.set("host", host);
     
-    // For standalone apps, use standard HTTP redirect
-    // React Router requires throwing redirects, not returning them
-    throw redirect(redirectUrl.toString());
+    // Return redirect URL for manual redirect button if automatic redirect fails
+    return { redirectUrl: redirectUrl.toString() };
   } catch (error) {
-    // Re-throw redirect responses (from authenticate.admin during OAuth or our redirect)
+    // Re-throw redirect responses (from authenticate.admin during OAuth)
     // React Router will handle them properly
     if (error instanceof Response) {
       throw error;
@@ -42,6 +44,43 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw error;
   }
 };
+
+export default function AuthCallback() {
+  const { redirectUrl } = useLoaderData<typeof loader>();
+
+  // Try automatic redirect after a short delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.location.href = redirectUrl;
+    }, 1000); // Wait 1 second before auto-redirect
+
+    return () => clearTimeout(timer);
+  }, [redirectUrl]);
+
+  const handleManualRedirect = () => {
+    window.location.href = redirectUrl;
+  };
+
+  return (
+    <AppProvider embedded={false}>
+      <s-page>
+        <s-section heading="Authentication Successful">
+          <s-paragraph>
+            You have been successfully authenticated. Redirecting to the app...
+          </s-paragraph>
+          <s-stack direction="block" gap="base">
+            <s-button onClick={handleManualRedirect} variant="primary">
+              Continue to App
+            </s-button>
+            <s-paragraph>
+              If you are not redirected automatically, click the button above.
+            </s-paragraph>
+          </s-stack>
+        </s-section>
+      </s-page>
+    </AppProvider>
+  );
+}
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
