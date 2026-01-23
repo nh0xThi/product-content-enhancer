@@ -5,16 +5,19 @@ declare global {
   var prismaGlobal: PrismaClient;
 }
 
+// Validate DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL environment variable is required. " +
+    "For local development, set it to 'file:./prisma/dev.sqlite'. " +
+    "For production, set it to your PostgreSQL connection string."
+  );
+}
+
 // Optimize Prisma connection for production
 const createPrismaClient = () => {
   return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-    // Connection pool settings for better performance
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
   });
 };
 

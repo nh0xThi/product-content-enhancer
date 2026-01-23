@@ -8,9 +8,14 @@ generator client {
 // Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
 // enough when changing adapters.
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+// This schema uses PostgreSQL for production (Neon, Render, or any PostgreSQL provider).
+// Set DATABASE_URL environment variable:
+// - Development: Use local PostgreSQL or SQLite (requires schema change)
+// - Production (Neon): "postgresql://user:password@ep-xxxxx.region.aws.neon.tech/neondb?sslmode=require"
+// - Production (Render): "postgresql://user:password@host:port/database"
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Session {
