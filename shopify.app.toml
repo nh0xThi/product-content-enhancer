@@ -2,7 +2,7 @@
 
 client_id = "aa4dc4ac403f243cc667c8586ca9c70d"
 name = "product-content-enhancer-lotz"
-application_url = "https://product-content-enhancer.vercel.app"
+application_url = "https://product-content-enhancer.onrender.com"
 embedded = true
 
 [build]
@@ -24,4 +24,4 @@ api_version = "2026-04"
 scopes = "read_products, write_products,read_product_listings, write_product_listings, read_themes, write_themes"
 
 [auth]
-redirect_urls = [ "https://product-content-enhancer.vercel.app/api/auth/callback" ]
+redirect_urls = [ "https://product-content-enhancer.onrender.com/api/auth/callback" ]
