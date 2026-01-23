@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: product-content-enhancer
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /health
+    # Increase timeout for Shopify admin requests (in seconds)
+    # Default is 30s, increasing to 5 minutes for initial auth requests
+    plan: starter
