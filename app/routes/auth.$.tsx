@@ -52,7 +52,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const timer = setTimeout(() => {
       window.location.href = redirectUrl;
-    }, 1000); // Wait 1 second before auto-redirect
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [redirectUrl]);
@@ -63,21 +63,79 @@ export default function AuthCallback() {
 
   return (
     <AppProvider embedded={false}>
-      <s-page>
-        <s-section heading="Authentication Successful">
-          <s-paragraph>
+      <div
+        style={{
+          padding: "3rem 2rem",
+          maxWidth: "600px",
+          margin: "0 auto",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            padding: "2rem",
+            border: "1px solid #e1e3e5",
+            borderRadius: "8px",
+            backgroundColor: "#fff",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "24px",
+              fontWeight: "600",
+              marginBottom: "1rem",
+              color: "#202223",
+            }}
+          >
+            Authentication Successful
+          </h1>
+          <p
+            style={{
+              fontSize: "16px",
+              color: "#5e6e77",
+              marginBottom: "2rem",
+              lineHeight: "1.5",
+            }}
+          >
             You have been successfully authenticated. Redirecting to the app...
-          </s-paragraph>
-          <s-stack direction="block" gap="base">
-            <s-button onClick={handleManualRedirect} variant="primary">
-              Continue to App
-            </s-button>
-            <s-paragraph>
-              If you are not redirected automatically, click the button above.
-            </s-paragraph>
-          </s-stack>
-        </s-section>
-      </s-page>
+          </p>
+          <button
+            onClick={handleManualRedirect}
+            style={{
+              padding: "12px 24px",
+              fontSize: "16px",
+              backgroundColor: "#008060",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "600",
+              display: "block",
+              width: "100%",
+              transition: "background-color 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#006e52";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "#008060";
+            }}
+          >
+            Continue to App
+          </button>
+          <p
+            style={{
+              marginTop: "1rem",
+              color: "#6d7175",
+              fontSize: "14px",
+              textAlign: "center",
+            }}
+          >
+            If you are not redirected automatically, click the button above.
+          </p>
+        </div>
+      </div>
     </AppProvider>
   );
 }
