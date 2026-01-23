@@ -4,15 +4,44 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { useFetcher } from "react-router";
+import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
 
-  return null;
+  // Fetch existing products from the shop
+  const productsResponse = await admin.graphql(
+    `#graphql
+      query getProducts {
+        products(first: 25) {
+          nodes {
+            id
+            title
+            handle
+            description
+            status
+            createdAt
+            updatedAt
+            variants(first: 5) {
+              nodes {
+                id
+                title
+                price
+                sku
+              }
+            }
+          }
+        }
+      }`,
+  );
+
+  const productsData = await productsResponse.json();
+  const products = productsData.data?.products?.nodes || [];
+
+  return { products };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -85,6 +114,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
+  const { products } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
 
   const shopify = useAppBridge();
@@ -95,16 +125,77 @@ export default function Index() {
   useEffect(() => {
     if (fetcher.data?.product?.id) {
       shopify.toast.show("Product created");
+      // Reload the page to show the new product in the list
+      window.location.reload();
     }
   }, [fetcher.data?.product?.id, shopify]);
 
   const generateProduct = () => fetcher.submit({}, { method: "POST" });
 
   return (
-    <s-page heading="Shopify app template">
+    <s-page heading="Product Content Enhancer">
       <s-button slot="primary-action" onClick={generateProduct}>
         Generate a product
       </s-button>
+
+      <s-section heading="Your Shop Products">
+        <s-paragraph>
+          Here are your shop products. You can work on enhancing their content.
+        </s-paragraph>
+        {products.length > 0 ? (
+          <s-stack direction="block" gap="base">
+            {products.map((product: any) => (
+              <s-box
+                key={product.id}
+                padding="base"
+                borderWidth="base"
+                borderRadius="base"
+                background="subdued"
+              >
+                <s-stack direction="block" gap="tight">
+                  <s-heading level={3}>{product.title}</s-heading>
+                  {product.description && (
+                    <s-paragraph>
+                      {product.description.substring(0, 200)}
+                      {product.description.length > 200 ? "..." : ""}
+                    </s-paragraph>
+                  )}
+                  <s-stack direction="inline" gap="tight">
+                    <s-text emphasis="subdued">Status: {product.status}</s-text>
+                    <s-text emphasis="subdued">
+                      Variants: {product.variants?.nodes?.length || 0}
+                    </s-text>
+                  </s-stack>
+                  {product.variants?.nodes?.length > 0 && (
+                    <s-stack direction="block" gap="tight">
+                      <s-text emphasis="strong">Variants:</s-text>
+                      {product.variants.nodes.map((variant: any) => (
+                        <s-text key={variant.id} emphasis="subdued">
+                          {variant.title} - ${variant.price}
+                        </s-text>
+                      ))}
+                    </s-stack>
+                  )}
+                  <s-button
+                    variant="tertiary"
+                    onClick={() => {
+                      shopify.intents.invoke?.("edit:shopify/Product", {
+                        value: product.id,
+                      });
+                    }}
+                  >
+                    Edit Product
+                  </s-button>
+                </s-stack>
+              </s-box>
+            ))}
+          </s-stack>
+        ) : (
+          <s-paragraph>
+            No products found. Create your first product using the button above.
+          </s-paragraph>
+        )}
+      </s-section>
 
       <s-section heading="Congrats on creating a new Shopify app 🎉">
         <s-paragraph>

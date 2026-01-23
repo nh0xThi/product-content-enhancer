@@ -16,8 +16,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const shop = url.searchParams.get("shop");
     const host = url.searchParams.get("host");
     
-    // Get the app URL (use current request origin for same-domain redirect)
-    const appUrl = process.env.SHOPIFY_APP_URL || url.origin;
+    // Get the app URL - prioritize EXTERNAL_APP_URL for production, then SHOPIFY_APP_URL, then current origin
+    const appUrl = process.env.EXTERNAL_APP_URL || process.env.SHOPIFY_APP_URL || url.origin;
     const appUrlObj = new URL(appUrl);
     
     // Redirect to /app route with shop parameter
