@@ -1,267 +1,153 @@
 // Handle /api/auth/callback route
-// This is the same as auth.$.tsx but for the /api/auth/callback path
-import { useEffect } from "react";
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+// Manual OAuth callback handler (similar to Next.js implementation)
+import type { LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
-import { useLoaderData } from "react-router";
-import { AppProvider } from "@shopify/shopify-app-react-router/react";
-import { authenticate } from "../shopify.server";
-import { boundary } from "@shopify/shopify-app-react-router/server";
+
+const API_KEY = process.env.SHOPIFY_API_KEY!;
+const API_SECRET = process.env.SHOPIFY_API_SECRET!;
+
+// Helper function to parse cookies from request headers
+const parseCookies = (cookieHeader: string | null): Record<string, string> => {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  
+  cookieHeader.split(";").forEach((cookie) => {
+    const [name, ...rest] = cookie.trim().split("=");
+    if (name && rest.length > 0) {
+      cookies[name] = decodeURIComponent(rest.join("="));
+    }
+  });
+  
+  return cookies;
+};
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  console.log("🔵 [API AUTH CALLBACK] Loader started");
-  console.log("🔵 [API AUTH CALLBACK] Request URL:", request.url);
-  console.log("🔵 [API AUTH CALLBACK] Request method:", request.method);
-  console.log("🔵 [API AUTH CALLBACK] Request headers:", Object.fromEntries(request.headers.entries()));
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const shopParam = url.searchParams.get("shop");
   
-  try {
-    // Authenticate the request - this handles the OAuth flow
-    // During OAuth, authenticate.admin will throw redirect responses
-    // After OAuth completes, it returns the admin object
-    console.log("🔵 [API AUTH CALLBACK] Starting authentication...");
-    const admin = await authenticate.admin(request);
-    console.log("🔵 [API AUTH CALLBACK] Authentication successful!");
-    console.log("🔵 [API AUTH CALLBACK] Admin object received:", admin ? "✓" : "✗");
-    
-    // If we reach here, authentication is complete
-    // After OAuth callback, redirect back to the app
-    const url = new URL(request.url);
-    const shop = url.searchParams.get("shop");
-    const host = url.searchParams.get("host");
-    
-    console.log("🔵 [API AUTH CALLBACK] URL parsing:");
-    console.log("  - Full URL:", url.toString());
-    console.log("  - Origin:", url.origin);
-    console.log("  - Pathname:", url.pathname);
-    console.log("  - Search params:", url.search);
-    console.log("  - Shop parameter:", shop);
-    console.log("  - Host parameter:", host);
-    
-    // Get the app URL - prioritize EXTERNAL_APP_URL for production, then SHOPIFY_APP_URL, then current origin
-    const EXTERNAL_APP_URL = process.env.EXTERNAL_APP_URL;
-    const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL;
-    
-    console.log("🔵 [API AUTH CALLBACK] Environment variables:");
-    console.log("  - EXTERNAL_APP_URL:", EXTERNAL_APP_URL || "(not set)");
-    console.log("  - SHOPIFY_APP_URL:", SHOPIFY_APP_URL || "(not set)");
-    console.log("  - Current origin:", url.origin);
-    
-    const appUrl = EXTERNAL_APP_URL || SHOPIFY_APP_URL || url.origin;
-    console.log("🔵 [API AUTH CALLBACK] Selected app URL:", appUrl);
-    
-    const appUrlObj = new URL(appUrl);
-    console.log("🔵 [API AUTH CALLBACK] App URL object:", {
-      origin: appUrlObj.origin,
-      hostname: appUrlObj.hostname,
-      protocol: appUrlObj.protocol,
+  // Parse cookies from request
+  const cookieHeader = request.headers.get("Cookie");
+  const cookies = parseCookies(cookieHeader);
+  const storedState = cookies["shopify_state"];
+  const storedShop = cookies["shopify_shop"];
+  
+  // Extract shop name (remove .myshopify.com if present)
+  let shop = shopParam?.replace(".myshopify.com", "") || storedShop;
+  
+  // Validate required parameters
+  if (!code) {
+    return new Response(JSON.stringify({ error: "Missing authorization code" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
     });
-    
-    // Redirect to /app route with shop parameter
-    // This is the main app page after authentication
-    const redirectPath = "/app";
-    const redirectUrl = new URL(redirectPath, appUrlObj.origin);
-    
-    console.log("🔵 [API AUTH CALLBACK] Building redirect URL:");
-    console.log("  - Base URL:", appUrlObj.origin);
-    console.log("  - Redirect path:", redirectPath);
-    console.log("  - Initial redirect URL:", redirectUrl.toString());
-    
-    // Preserve shop and host parameters
-    if (shop) {
-      redirectUrl.searchParams.set("shop", shop);
-      console.log("🔵 [API AUTH CALLBACK] Added shop parameter:", shop);
-    }
-    if (host) {
-      redirectUrl.searchParams.set("host", host);
-      console.log("🔵 [API AUTH CALLBACK] Added host parameter:", host);
-    }
-    
-    const finalRedirectUrl = redirectUrl.toString();
-    console.log("🔵 [API AUTH CALLBACK] Final redirect URL:", finalRedirectUrl);
-    console.log("🔵 [API AUTH CALLBACK] Returning redirect URL to component");
-    
-    // Return redirect URL for manual redirect button if automatic redirect fails
-    return { redirectUrl: finalRedirectUrl };
-  } catch (error) {
-    console.error("🔴 [API AUTH CALLBACK] Error in loader:");
-    console.error("  - Error type:", error instanceof Error ? error.constructor.name : typeof error);
-    console.error("  - Error message:", error instanceof Error ? error.message : String(error));
-    console.error("  - Is Response:", error instanceof Response);
-    
-    if (error instanceof Response) {
-      console.log("🔵 [API AUTH CALLBACK] Response error (likely OAuth redirect):");
-      console.log("  - Status:", error.status);
-      console.log("  - Status text:", error.statusText);
-      console.log("  - Headers:", Object.fromEntries(error.headers.entries()));
-      if (error.headers.get("location")) {
-        console.log("  - Location header:", error.headers.get("location"));
+  }
+  
+  if (!state) {
+    return new Response(JSON.stringify({ error: "Missing state parameter" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  
+  if (!shop) {
+    return new Response(JSON.stringify({ error: "Missing shop parameter" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  
+  if (state !== storedState) {
+    console.error("State mismatch:", { received: state, stored: storedState });
+    return new Response(
+      JSON.stringify({ error: "Invalid state parameter - possible CSRF attack" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
       }
+    );
+  }
+  
+  // Ensure shop doesn't contain .myshopify.com for the API call
+  shop = shop.replace(".myshopify.com", "");
+
+  try {
+    // Shopify expects form-encoded data, not JSON
+    const formData = new URLSearchParams({
+      client_id: API_KEY,
+      client_secret: API_SECRET,
+      code,
+    });
+
+    const response = await fetch(`https://${shop}.myshopify.com/admin/oauth/access_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
+
+    const data = await response.json();
+    const { access_token } = data;
+
+    if (!access_token) {
+      throw new Error("No access token received from Shopify");
+    }
+
+    // Build redirect URL
+    const baseUrl = new URL(request.url);
+    const redirectPath = "/app"; // Change to "/dashboard" if you create that route
+    const redirectUrl = new URL(redirectPath, baseUrl.origin);
+
+    console.log("Setting cookies after OAuth:", {
+      shop,
+      hasToken: !!access_token,
+      url: request.url,
+    });
+
+    // Create redirect response with cookies
+    const isProduction = process.env.NODE_ENV === "production";
+    const secureFlag = isProduction ? "Secure; " : "";
+    const maxAge = 60 * 60 * 24 * 30; // 30 days
     
-    // Re-throw redirect responses (from authenticate.admin during OAuth)
-    // React Router will handle them properly
-    if (error instanceof Response) {
-      throw error;
-    }
-    // Re-throw any other errors
-    throw error;
+    const redirectResponse = redirect(redirectUrl.toString());
+    
+    // Set cookies
+    redirectResponse.headers.append(
+      "Set-Cookie",
+      `shopify_access_token=${access_token}; HttpOnly; ${secureFlag}SameSite=Lax; Path=/; Max-Age=${maxAge}`
+    );
+    redirectResponse.headers.append(
+      "Set-Cookie",
+      `shopify_shop=${shop}; HttpOnly; ${secureFlag}SameSite=Lax; Path=/; Max-Age=${maxAge}`
+    );
+
+    return redirectResponse;
+  } catch (error: any) {
+    console.error("Token exchange error:", error);
+    const errorMessage = error.message || "Unknown error";
+    console.error("Error details:", error);
+    
+    return new Response(
+      JSON.stringify({
+        error: "Auth failed",
+        details: errorMessage,
+        shop,
+        hasCode: !!code,
+        hasState: !!state,
+        stateMatches: state === storedState,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };
 
-export default function ApiAuthCallback() {
-  console.log("🟢 [API AUTH CALLBACK] Component rendering");
-  
-  const loaderData = useLoaderData<typeof loader>();
-  console.log("🟢 [API AUTH CALLBACK] Loader data received:", loaderData);
-  
-  const { redirectUrl } = loaderData;
-  console.log("🟢 [API AUTH CALLBACK] Redirect URL from loader:", redirectUrl);
-  console.log("🟢 [API AUTH CALLBACK] Current window location:", {
-    href: window.location.href,
-    origin: window.location.origin,
-    pathname: window.location.pathname,
-    search: window.location.search,
-  });
-
-  // Try automatic redirect after a short delay
-  useEffect(() => {
-    console.log("🟢 [API AUTH CALLBACK] useEffect triggered");
-    console.log("🟢 [API AUTH CALLBACK] Setting up auto-redirect timer (2 seconds)");
-    console.log("🟢 [API AUTH CALLBACK] Will redirect to:", redirectUrl);
-    
-    const timer = setTimeout(() => {
-      console.log("🟢 [API AUTH CALLBACK] Auto-redirect timer fired!");
-      console.log("🟢 [API AUTH CALLBACK] Redirecting to:", redirectUrl);
-      console.log("🟢 [API AUTH CALLBACK] Current location before redirect:", window.location.href);
-      
-      try {
-        window.location.href = redirectUrl;
-        console.log("🟢 [API AUTH CALLBACK] window.location.href set successfully");
-      } catch (error) {
-        console.error("🔴 [API AUTH CALLBACK] Error during auto-redirect:", error);
-      }
-    }, 2000);
-
-    return () => {
-      console.log("🟢 [API AUTH CALLBACK] Cleanup: clearing auto-redirect timer");
-      clearTimeout(timer);
-    };
-  }, [redirectUrl]);
-
-  const handleManualRedirect = () => {
-    console.log("🟢 [API AUTH CALLBACK] Manual redirect button clicked!");
-    console.log("🟢 [API AUTH CALLBACK] Redirecting to:", redirectUrl);
-    console.log("🟢 [API AUTH CALLBACK] Current location before redirect:", window.location.href);
-    
-    try {
-      window.location.href = redirectUrl;
-      console.log("🟢 [API AUTH CALLBACK] window.location.href set successfully");
-    } catch (error) {
-      console.error("🔴 [API AUTH CALLBACK] Error during manual redirect:", error);
-    }
-  };
-  
-  console.log("🟢 [API AUTH CALLBACK] Rendering UI with redirect button");
-
-  return (
-    <AppProvider embedded={false}>
-      <div
-        style={{
-          padding: "3rem 2rem",
-          maxWidth: "600px",
-          margin: "0 auto",
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-        }}
-      >
-        <div
-          style={{
-            padding: "2rem",
-            border: "1px solid #e1e3e5",
-            borderRadius: "8px",
-            backgroundColor: "#fff",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <h1
-            style={{
-              fontSize: "24px",
-              fontWeight: "600",
-              marginBottom: "1rem",
-              color: "#202223",
-            }}
-          >
-            Authentication Successful
-          </h1>
-          <p
-            style={{
-              fontSize: "16px",
-              color: "#5e6e77",
-              marginBottom: "2rem",
-              lineHeight: "1.5",
-            }}
-          >
-            You have been successfully authenticated. Redirecting to the app...
-          </p>
-          <button
-            onClick={handleManualRedirect}
-            style={{
-              padding: "12px 24px",
-              fontSize: "16px",
-              backgroundColor: "#008060",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontWeight: "600",
-              display: "block",
-              width: "100%",
-              transition: "background-color 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#006e52";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#008060";
-            }}
-          >
-            Continue to App
-          </button>
-          <p
-            style={{
-              marginTop: "1rem",
-              color: "#6d7175",
-              fontSize: "14px",
-              textAlign: "center",
-            }}
-          >
-            If you are not redirected automatically, click the button above.
-          </p>
-          {/* Debug information */}
-          <div
-            style={{
-              marginTop: "2rem",
-              padding: "1rem",
-              backgroundColor: "#f6f6f7",
-              borderRadius: "4px",
-              fontSize: "12px",
-              fontFamily: "monospace",
-              wordBreak: "break-all",
-            }}
-          >
-            <strong>Debug Info:</strong>
-            <br />
-            Redirect URL: {redirectUrl}
-            <br />
-            Current URL: {typeof window !== "undefined" ? window.location.href : "N/A"}
-            <br />
-            Check browser console for detailed logs
-          </div>
-        </div>
-      </div>
-    </AppProvider>
-  );
-}
-
-export const headers: HeadersFunction = (headersArgs) => {
-  return boundary.headers(headersArgs);
-};
