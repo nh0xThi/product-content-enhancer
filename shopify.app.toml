@@ -24,4 +24,8 @@ api_version = "2026-04"
 scopes = "read_products, write_products,read_product_listings, write_product_listings"
 
 [auth]
-redirect_urls = [ "https://product-content-enhancer.onrender.com/auth/callback" ]
+redirect_urls = [
+  "https://product-content-enhancer.onrender.com/auth/callback",
+  "https://product-content-enhancer.onrender.com/auth/shopify/callback",
+  "https://product-content-enhancer.onrender.com/api/auth/callback"
+]

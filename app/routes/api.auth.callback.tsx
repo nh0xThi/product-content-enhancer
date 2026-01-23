@@ -1,3 +1,5 @@
+// Handle /api/auth/callback route
+// This is the same as auth.$.tsx but for the /api/auth/callback path
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import { authenticate } from "../shopify.server";
