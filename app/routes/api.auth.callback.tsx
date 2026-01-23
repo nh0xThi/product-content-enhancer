@@ -9,11 +9,19 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  console.log("🔵 [API AUTH CALLBACK] Loader started");
+  console.log("🔵 [API AUTH CALLBACK] Request URL:", request.url);
+  console.log("🔵 [API AUTH CALLBACK] Request method:", request.method);
+  console.log("🔵 [API AUTH CALLBACK] Request headers:", Object.fromEntries(request.headers.entries()));
+  
   try {
     // Authenticate the request - this handles the OAuth flow
     // During OAuth, authenticate.admin will throw redirect responses
     // After OAuth completes, it returns the admin object
-    await authenticate.admin(request);
+    console.log("🔵 [API AUTH CALLBACK] Starting authentication...");
+    const admin = await authenticate.admin(request);
+    console.log("🔵 [API AUTH CALLBACK] Authentication successful!");
+    console.log("🔵 [API AUTH CALLBACK] Admin object received:", admin ? "✓" : "✗");
     
     // If we reach here, authentication is complete
     // After OAuth callback, redirect back to the app
@@ -21,22 +29,75 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const shop = url.searchParams.get("shop");
     const host = url.searchParams.get("host");
     
+    console.log("🔵 [API AUTH CALLBACK] URL parsing:");
+    console.log("  - Full URL:", url.toString());
+    console.log("  - Origin:", url.origin);
+    console.log("  - Pathname:", url.pathname);
+    console.log("  - Search params:", url.search);
+    console.log("  - Shop parameter:", shop);
+    console.log("  - Host parameter:", host);
+    
     // Get the app URL - prioritize EXTERNAL_APP_URL for production, then SHOPIFY_APP_URL, then current origin
-    const appUrl = process.env.EXTERNAL_APP_URL || process.env.SHOPIFY_APP_URL || url.origin;
+    const EXTERNAL_APP_URL = process.env.EXTERNAL_APP_URL;
+    const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL;
+    
+    console.log("🔵 [API AUTH CALLBACK] Environment variables:");
+    console.log("  - EXTERNAL_APP_URL:", EXTERNAL_APP_URL || "(not set)");
+    console.log("  - SHOPIFY_APP_URL:", SHOPIFY_APP_URL || "(not set)");
+    console.log("  - Current origin:", url.origin);
+    
+    const appUrl = EXTERNAL_APP_URL || SHOPIFY_APP_URL || url.origin;
+    console.log("🔵 [API AUTH CALLBACK] Selected app URL:", appUrl);
+    
     const appUrlObj = new URL(appUrl);
+    console.log("🔵 [API AUTH CALLBACK] App URL object:", {
+      origin: appUrlObj.origin,
+      hostname: appUrlObj.hostname,
+      protocol: appUrlObj.protocol,
+    });
     
     // Redirect to /app route with shop parameter
     // This is the main app page after authentication
     const redirectPath = "/app";
     const redirectUrl = new URL(redirectPath, appUrlObj.origin);
     
+    console.log("🔵 [API AUTH CALLBACK] Building redirect URL:");
+    console.log("  - Base URL:", appUrlObj.origin);
+    console.log("  - Redirect path:", redirectPath);
+    console.log("  - Initial redirect URL:", redirectUrl.toString());
+    
     // Preserve shop and host parameters
-    if (shop) redirectUrl.searchParams.set("shop", shop);
-    if (host) redirectUrl.searchParams.set("host", host);
+    if (shop) {
+      redirectUrl.searchParams.set("shop", shop);
+      console.log("🔵 [API AUTH CALLBACK] Added shop parameter:", shop);
+    }
+    if (host) {
+      redirectUrl.searchParams.set("host", host);
+      console.log("🔵 [API AUTH CALLBACK] Added host parameter:", host);
+    }
+    
+    const finalRedirectUrl = redirectUrl.toString();
+    console.log("🔵 [API AUTH CALLBACK] Final redirect URL:", finalRedirectUrl);
+    console.log("🔵 [API AUTH CALLBACK] Returning redirect URL to component");
     
     // Return redirect URL for manual redirect button if automatic redirect fails
-    return { redirectUrl: redirectUrl.toString() };
+    return { redirectUrl: finalRedirectUrl };
   } catch (error) {
+    console.error("🔴 [API AUTH CALLBACK] Error in loader:");
+    console.error("  - Error type:", error instanceof Error ? error.constructor.name : typeof error);
+    console.error("  - Error message:", error instanceof Error ? error.message : String(error));
+    console.error("  - Is Response:", error instanceof Response);
+    
+    if (error instanceof Response) {
+      console.log("🔵 [API AUTH CALLBACK] Response error (likely OAuth redirect):");
+      console.log("  - Status:", error.status);
+      console.log("  - Status text:", error.statusText);
+      console.log("  - Headers:", Object.fromEntries(error.headers.entries()));
+      if (error.headers.get("location")) {
+        console.log("  - Location header:", error.headers.get("location"));
+      }
+    }
+    
     // Re-throw redirect responses (from authenticate.admin during OAuth)
     // React Router will handle them properly
     if (error instanceof Response) {
@@ -48,20 +109,59 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function ApiAuthCallback() {
-  const { redirectUrl } = useLoaderData<typeof loader>();
+  console.log("🟢 [API AUTH CALLBACK] Component rendering");
+  
+  const loaderData = useLoaderData<typeof loader>();
+  console.log("🟢 [API AUTH CALLBACK] Loader data received:", loaderData);
+  
+  const { redirectUrl } = loaderData;
+  console.log("🟢 [API AUTH CALLBACK] Redirect URL from loader:", redirectUrl);
+  console.log("🟢 [API AUTH CALLBACK] Current window location:", {
+    href: window.location.href,
+    origin: window.location.origin,
+    pathname: window.location.pathname,
+    search: window.location.search,
+  });
 
   // Try automatic redirect after a short delay
   useEffect(() => {
+    console.log("🟢 [API AUTH CALLBACK] useEffect triggered");
+    console.log("🟢 [API AUTH CALLBACK] Setting up auto-redirect timer (2 seconds)");
+    console.log("🟢 [API AUTH CALLBACK] Will redirect to:", redirectUrl);
+    
     const timer = setTimeout(() => {
-      window.location.href = redirectUrl;
-    }, 2000); // Wait 2 seconds before auto-redirect to give user time to see the button
+      console.log("🟢 [API AUTH CALLBACK] Auto-redirect timer fired!");
+      console.log("🟢 [API AUTH CALLBACK] Redirecting to:", redirectUrl);
+      console.log("🟢 [API AUTH CALLBACK] Current location before redirect:", window.location.href);
+      
+      try {
+        window.location.href = redirectUrl;
+        console.log("🟢 [API AUTH CALLBACK] window.location.href set successfully");
+      } catch (error) {
+        console.error("🔴 [API AUTH CALLBACK] Error during auto-redirect:", error);
+      }
+    }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      console.log("🟢 [API AUTH CALLBACK] Cleanup: clearing auto-redirect timer");
+      clearTimeout(timer);
+    };
   }, [redirectUrl]);
 
   const handleManualRedirect = () => {
-    window.location.href = redirectUrl;
+    console.log("🟢 [API AUTH CALLBACK] Manual redirect button clicked!");
+    console.log("🟢 [API AUTH CALLBACK] Redirecting to:", redirectUrl);
+    console.log("🟢 [API AUTH CALLBACK] Current location before redirect:", window.location.href);
+    
+    try {
+      window.location.href = redirectUrl;
+      console.log("🟢 [API AUTH CALLBACK] window.location.href set successfully");
+    } catch (error) {
+      console.error("🔴 [API AUTH CALLBACK] Error during manual redirect:", error);
+    }
   };
+  
+  console.log("🟢 [API AUTH CALLBACK] Rendering UI with redirect button");
 
   return (
     <AppProvider embedded={false}>
@@ -136,6 +236,26 @@ export default function ApiAuthCallback() {
           >
             If you are not redirected automatically, click the button above.
           </p>
+          {/* Debug information */}
+          <div
+            style={{
+              marginTop: "2rem",
+              padding: "1rem",
+              backgroundColor: "#f6f6f7",
+              borderRadius: "4px",
+              fontSize: "12px",
+              fontFamily: "monospace",
+              wordBreak: "break-all",
+            }}
+          >
+            <strong>Debug Info:</strong>
+            <br />
+            Redirect URL: {redirectUrl}
+            <br />
+            Current URL: {typeof window !== "undefined" ? window.location.href : "N/A"}
+            <br />
+            Check browser console for detailed logs
+          </div>
         </div>
       </div>
     </AppProvider>
