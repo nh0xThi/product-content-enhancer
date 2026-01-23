@@ -21,7 +21,7 @@ api_version = "2026-04"
   uri = "/webhooks/app/scopes_update"
 
 [access_scopes]
-scopes = "read_products, write_products,read_product_listings, write_product_listings, read_themes, write_themes"
+scopes = "read_products, write_products,read_product_listings, write_product_listings"
 
 [auth]
 redirect_urls = [ "https://product-content-enhancer.onrender.com/auth/callback" ]
