@@ -35,36 +35,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       redirectUrl = `${origin}${path}`;
     }
     
-    // Check if redirect is to external domain (different origin)
-    const currentOrigin = new URL(request.url).origin;
-    const targetOrigin = new URL(redirectUrl).origin;
-    const isExternalRedirect = currentOrigin !== targetOrigin;
-    
-    // For external redirects in embedded apps, return HTML with JavaScript redirect
-    // This works better in iframes than HTTP redirects
-    if (isExternalRedirect) {
-      return new Response(
-        `<!DOCTYPE html>
-<html>
-<head>
-  <meta http-equiv="refresh" content="0;url=${redirectUrl}">
-  <script>window.top.location.href = ${JSON.stringify(redirectUrl)};</script>
-</head>
-<body>
-  <p>Redirecting to external app...</p>
-  <p>If you are not redirected, <a href="${redirectUrl}">click here</a>.</p>
-</body>
-</html>`,
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "text/html",
-          },
-        }
-      );
-    }
-    
-    // For same-origin redirects, use standard redirect
+    // For standalone apps, use standard HTTP redirect
+    // React Router requires throwing redirects, not returning them
     throw redirect(redirectUrl);
   } catch (error) {
     // Re-throw redirect responses (from authenticate.admin during OAuth or our redirect)

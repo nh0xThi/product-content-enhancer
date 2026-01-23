@@ -3,7 +3,7 @@
 client_id = "aa4dc4ac403f243cc667c8586ca9c70d"
 name = "product-content-enhancer-lotz"
 application_url = "https://product-content-enhancer.onrender.com"
-embedded = true
+embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
