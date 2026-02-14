@@ -3,6 +3,16 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
+declare global {
+  interface Window {
+    shopify?: {
+      navigation?: {
+        navigate: (path: string, options?: { history?: 'push' | 'replace' }) => void | Promise<unknown>;
+      };
+    };
+  }
+}
+
 export interface NavItemForTitleBar {
   path: string;
   label: string;
@@ -17,8 +27,8 @@ const APP_TITLE = 'Product Data Optimizer';
 
 /**
  * When the app is embedded in Shopify Admin, this component syncs the current
- * page to the store's title bar (nested path under the app name), not inside our app.
- * Uses document.title and, when available, Shopify App Bridge (s-page / ui-title-bar).
+ * path to the store's admin URL (so the nested path appears in the address bar)
+ * and title bar. Uses App Bridge Navigation API and document.title.
  */
 export default function EmbeddedShopifyTitleBar({ basePath, navItems }: EmbeddedShopifyTitleBarProps) {
   const pathname = usePathname();
@@ -29,7 +39,27 @@ export default function EmbeddedShopifyTitleBar({ basePath, navItems }: Embedded
   const currentNav = navItems.find((item) => pathname === basePath + item.path);
   const pageTitle = currentNav?.label ?? 'App';
 
-  // Keep document.title in sync so the iframe title reflects the page (admin may show it)
+  // Sync the admin's top-level URL to the current path so the nested path appears (e.g. .../apps/your-app/app/dashboard)
+  useEffect(() => {
+    if (!hasHost || !pathname) return;
+    const path = pathname.startsWith('/') ? pathname : `/${pathname}`;
+    const trySync = () => {
+      const shopify = typeof window !== 'undefined' ? window.shopify : undefined;
+      if (shopify?.navigation?.navigate) {
+        shopify.navigation.navigate(path, { history: 'replace' });
+        return true;
+      }
+      return false;
+    };
+    if (trySync()) return;
+    // App Bridge script may load after first paint; retry once after a short delay
+    const t = window.setTimeout(() => {
+      trySync();
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [hasHost, pathname]);
+
+  // Keep document.title in sync so the iframe title reflects the page
   useEffect(() => {
     if (!hasHost) return;
     const prev = document.title;
@@ -39,19 +69,16 @@ export default function EmbeddedShopifyTitleBar({ basePath, navItems }: Embedded
     };
   }, [hasHost, pageTitle]);
 
-  // When App Bridge is loaded, render s-page so the Shopify Admin title bar shows the nested path.
-  // The component is hidden in our iframe; it only drives the parent admin UI.
+  // Optional: s-page for admin title bar label (if App Bridge exposes it)
   useEffect(() => {
     if (!hasHost || !containerRef.current) return;
     const container = containerRef.current;
     const existing = document.querySelector('script[data-api-key][src*="app-bridge"]');
     if (!existing) return;
 
-    // Use Shopify's s-page web component if defined (by app-bridge.js from root layout)
     const PageComponent = document.createElement('s-page');
     PageComponent.setAttribute('heading', pageTitle);
 
-    // Breadcrumb: link back to app root so the store shows "App Name > Current page"
     const breadcrumbSlot = document.createElement('div');
     breadcrumbSlot.slot = 'breadcrumb-actions';
     const homeLink = document.createElement('a');
