@@ -14,6 +14,7 @@ import {
   SettingsIcon,
 } from '@shopify/polaris-icons';
 import { getSettings } from '@/lib/settings';
+import EmbeddedShopifyTitleBar from '@/components/EmbeddedShopifyTitleBar';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -50,7 +51,19 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
 
+  // Embedded in Shopify: no sidebar; nested path appears in the store's admin title bar via App Bridge
   if (variant === 'embedded' && isEmbeddedInShopify) {
+    return (
+      <div className="embedded-app-wrapper">
+        <EmbeddedShopifyTitleBar basePath={basePath} navItems={navItems} />
+        <div className="mx-auto w-full max-w-screen-2xl embedded-app-content">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  if (isEmbeddedInShopify) {
     return (
       <div className="mx-auto w-full max-w-screen-2xl">
         {children}
