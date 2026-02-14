@@ -267,8 +267,12 @@ export default {
 
         const generationResponse = await fetch(`${env.APP_BASE_URL}/api/perplexity/generate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-worker-secret': env.WORKER_SECRET,
+          },
           body: JSON.stringify({
+            storeId: job.store_id,
             products,
             structure: JSON.stringify(structure),
             customPrompt: job.custom_prompt || undefined,

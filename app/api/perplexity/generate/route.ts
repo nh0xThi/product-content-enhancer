@@ -3,9 +3,19 @@ import perplexity from '@/lib/perplexity';
 import { prisma } from '@/lib/prisma';
 import { requireStoreAccess } from '@/lib/access';
 
+const WORKER_SECRET_HEADER = 'x-worker-secret';
+
+/** Allow internal worker to call this API with secret + storeId (no session). StoreId must exist and is trusted because only our app enqueues jobs after requireStoreAccess. */
+function isWorkerRequest(request: Request): boolean {
+  const secret = request.headers.get(WORKER_SECRET_HEADER);
+  const expected = process.env.CLOUDFLARE_WORKER_SECRET;
+  return Boolean(expected && secret && secret === expected);
+}
+
 export async function POST(request: Request) {
   try {
-    const { storeId, product, products, structure, customPrompt } = await request.json();
+    const body = await request.json();
+    const { storeId, product, products, structure, customPrompt } = body;
 
     const targetProducts = Array.isArray(products)
       ? products
@@ -20,9 +30,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const access = await requireStoreAccess(request, storeId);
-    if (!access) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isWorkerRequest(request)) {
+      const store = await prisma.store.findUnique({ where: { id: storeId }, select: { id: true } });
+      if (!store) {
+        return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+      }
+    } else {
+      const access = await requireStoreAccess(request, storeId);
+      if (!access) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     const skipStatuses = new Set(['content pass', 'ai generated', 'ai content imported', 'imported']);
