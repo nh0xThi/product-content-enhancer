@@ -18,16 +18,20 @@ const buildRedirectUri = (request: NextRequest) => {
 };
 
 export async function GET(request: NextRequest) {
-  const session = await getSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const url = new URL(request.url);
   const shopParam = url.searchParams.get('shop');
 
+  // Require session only when connecting an additional store from the app (optional).
+  // When opening from Shopify Admin (install flow), there is no session yet — allow OAuth.
+  const session = await getSessionFromRequest(request);
+  const isInstallFlow = !session && shopParam;
+
   if (!shopParam) {
     return NextResponse.json({ error: 'Missing shop parameter' }, { status: 400 });
+  }
+
+  if (!isInstallFlow && !session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Validate shop format

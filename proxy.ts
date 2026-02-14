@@ -14,7 +14,21 @@ export async function proxy(req: NextRequest) {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
-  } else if (!sessionCookie) {
+    return NextResponse.next({ request: req });
+  }
+
+  // Shopify install flow: ?shop= from Admin — redirect to OAuth (no login required)
+  const shop = req.nextUrl.searchParams.get("shop");
+  if (shop && !sessionCookie) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/api/shopify/auth";
+    url.searchParams.set("shop", shop);
+    const host = req.nextUrl.searchParams.get("host");
+    if (host) url.searchParams.set("host", host);
+    return NextResponse.redirect(url);
+  }
+
+  if (!sessionCookie) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

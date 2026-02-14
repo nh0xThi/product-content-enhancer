@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { getSessionFromRequest } from '@/lib/auth';
+import { getSessionFromRequest, createSession, getSessionCookieName, hashPassword } from '@/lib/auth';
 
 const API_KEY = process.env.SHOPIFY_API_KEY!;
 const API_SECRET = process.env.SHOPIFY_API_SECRET!;
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -105,27 +102,86 @@ export async function GET(request: NextRequest) {
     }
 
     if (storeRecord) {
-      try {
+      if (session) {
+        try {
+          await prisma.userStore.upsert({
+            where: {
+              userId_storeId: {
+                userId: session.user.id,
+                storeId: storeRecord.id,
+              },
+            },
+            update: {},
+            create: {
+              userId: session.user.id,
+              storeId: storeRecord.id,
+              role: 'admin',
+            },
+          });
+        } catch (linkError) {
+          console.error('Error linking user to store:', linkError);
+        }
+      } else {
+        // Install flow: no existing session — create a store-scoped user and session
+        const installEmail = `shopify-${storeRecord.id}@app.local`;
+        let user = await prisma.user.findUnique({
+          where: { email: installEmail },
+        });
+        if (!user) {
+          const randomPassword = crypto.randomBytes(32).toString('hex');
+          user = await prisma.user.create({
+            data: {
+              email: installEmail,
+              passwordHash: hashPassword(randomPassword),
+            },
+          });
+        }
         await prisma.userStore.upsert({
           where: {
             userId_storeId: {
-              userId: session.user.id,
+              userId: user.id,
               storeId: storeRecord.id,
             },
           },
           update: {},
           create: {
-            userId: session.user.id,
+            userId: user.id,
             storeId: storeRecord.id,
             role: 'admin',
           },
         });
-      } catch (linkError) {
-        console.error('Error linking user to store:', linkError);
+        const { token, expiresAt } = await createSession(user.id);
+        const sessionCookieName = getSessionCookieName();
+        const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+        const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url));
+        redirectResponse.cookies.set(sessionCookieName, token, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30,
+          expires: expiresAt,
+        });
+        redirectResponse.cookies.set('shopify_access_token', access_token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30,
+        });
+        redirectResponse.cookies.set('shopify_shop', shop, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30,
+        });
+        console.log('Store installed (sign-in with store); session created:', { shop: shopDomain });
+        return redirectResponse;
       }
     }
 
-    // Vercel always uses HTTPS, so secure should always be true
+    // Logged-in user connected another store — redirect to stores list
     const redirectResponse = NextResponse.redirect(new URL('/stores', request.url));
     
     console.log('Store connected successfully:', {
