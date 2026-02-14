@@ -17,7 +17,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next({ request: req });
   }
 
-  // Shopify install flow: ?shop= from Admin — redirect to OAuth (no login required)
+  // Shopify embedded or install: ?shop= from Admin — redirect to OAuth (no login required)
   const shop = req.nextUrl.searchParams.get("shop");
   if (shop && !sessionCookie) {
     const url = req.nextUrl.clone();

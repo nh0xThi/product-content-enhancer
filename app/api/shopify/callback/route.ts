@@ -13,32 +13,34 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const shopParam = url.searchParams.get('shop');
-  const storedState = request.cookies.get('shopify_state')?.value;
   const storedShop = request.cookies.get('shopify_shop')?.value;
-  
-  // Extract shop name (remove .myshopify.com if present)
-  let shop = shopParam?.replace('.myshopify.com', '') || storedShop;
-  
-  // Validate required parameters
+
+  let shop = shopParam?.replace(/\.myshopify\.com$/i, '') || storedShop?.replace(/\.myshopify\.com$/i, '');
+  if (shop) shop = shop.replace('.myshopify.com', '');
+
   if (!code) {
     return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 });
   }
-  
   if (!state) {
     return NextResponse.json({ error: 'Missing state parameter' }, { status: 400 });
   }
-  
   if (!shop) {
     return NextResponse.json({ error: 'Missing shop parameter' }, { status: 400 });
   }
-  
-  if (state !== storedState) {
-    console.error('State mismatch:', { received: state, stored: storedState });
+
+  const stored = await prisma.oAuthState.findUnique({
+    where: { shop },
+  });
+  if (!stored || stored.state !== state) {
+    console.error('State mismatch:', { shop, hasStored: !!stored });
+    await prisma.oAuthState.deleteMany({ where: { shop } }).catch(() => undefined);
     return NextResponse.json({ error: 'Invalid state parameter - possible CSRF attack' }, { status: 400 });
   }
-  
-  // Ensure shop doesn't contain .myshopify.com for the API call
-  shop = shop.replace('.myshopify.com', '');
+  if (stored.expiresAt.getTime() < Date.now()) {
+    await prisma.oAuthState.deleteMany({ where: { shop } }).catch(() => undefined);
+    return NextResponse.json({ error: 'State expired. Please try again.' }, { status: 400 });
+  }
+  await prisma.oAuthState.delete({ where: { shop } }).catch(() => undefined);
 
   try {
     // Shopify expects form-encoded data, not JSON
@@ -153,11 +155,12 @@ export async function GET(request: NextRequest) {
         const { token, expiresAt } = await createSession(user.id);
         const sessionCookieName = getSessionCookieName();
         const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+        const sameSite = isSecure ? ('none' as const) : ('lax' as const);
         const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url));
         redirectResponse.cookies.set(sessionCookieName, token, {
           httpOnly: true,
-          secure: isSecure,
-          sameSite: 'lax',
+          secure: true,
+          sameSite,
           path: '/',
           maxAge: 60 * 60 * 24 * 30,
           expires: expiresAt,
@@ -165,14 +168,14 @@ export async function GET(request: NextRequest) {
         redirectResponse.cookies.set('shopify_access_token', access_token, {
           httpOnly: true,
           secure: true,
-          sameSite: 'lax',
+          sameSite,
           path: '/',
           maxAge: 60 * 60 * 24 * 30,
         });
         redirectResponse.cookies.set('shopify_shop', shop, {
           httpOnly: true,
           secure: true,
-          sameSite: 'lax',
+          sameSite,
           path: '/',
           maxAge: 60 * 60 * 24 * 30,
         });
@@ -183,24 +186,23 @@ export async function GET(request: NextRequest) {
 
     // Logged-in user connected another store — redirect to stores list
     const redirectResponse = NextResponse.redirect(new URL('/stores', request.url));
-    
+    const sameSite = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' ? ('none' as const) : ('lax' as const);
     console.log('Store connected successfully:', {
       shop: shopDomain,
       name: shopName,
       hasToken: !!access_token,
     });
-    
     redirectResponse.cookies.set('shopify_access_token', access_token, {
       httpOnly: true,
-      secure: true, // Always secure on Vercel (HTTPS)
-      sameSite: 'lax',
+      secure: true,
+      sameSite,
       path: '/',
-      maxAge: 60 * 60 * 24 * 30, // 30days
+      maxAge: 60 * 60 * 24 * 30,
     });
     redirectResponse.cookies.set('shopify_shop', shop, {
       httpOnly: true,
-      secure: true, // Always secure on Vercel (HTTPS)
-      sameSite: 'lax',
+      secure: true,
+      sameSite,
       path: '/',
       maxAge: 60 * 60 * 24 * 30,
     });
@@ -218,7 +220,7 @@ export async function GET(request: NextRequest) {
         shop,
         hasCode: !!code,
         hasState: !!state,
-        stateMatches: state === storedState,
+        stateValid: !!stored,
       }, 
       { status: 500 }
     );

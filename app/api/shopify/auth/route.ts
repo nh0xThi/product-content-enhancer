@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSessionFromRequest } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const API_KEY = process.env.SHOPIFY_API_KEY!;
 const SCOPES = process.env.SHOPIFY_SCOPES!;
+const STATE_TTL_MINUTES = 10;
 
 const buildRedirectUri = (request: NextRequest) => {
   if (process.env.HOST) {
@@ -51,26 +53,15 @@ export async function GET(request: NextRequest) {
   }
 
   const state = crypto.randomBytes(16).toString('hex');
+  const expiresAt = new Date(Date.now() + STATE_TTL_MINUTES * 60 * 1000);
+
+  await prisma.oAuthState.upsert({
+    where: { shop },
+    create: { shop, state, expiresAt },
+    update: { state, expiresAt },
+  });
 
   const oauthUrl = `https://${shop}.myshopify.com/admin/oauth/authorize?client_id=${API_KEY}&scope=${SCOPES}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 
-  const response = NextResponse.redirect(oauthUrl);
-  const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-  
-  response.cookies.set('shopify_state', state, { 
-    httpOnly: true, 
-    secure: isSecure, 
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 10 // 10 minutes
-  });
-  response.cookies.set('shopify_shop', shop, { 
-    httpOnly: true, 
-    secure: isSecure, 
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 10 // 10 minutes
-  });
-
-  return response;
+  return NextResponse.redirect(oauthUrl);
 }

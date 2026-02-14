@@ -115,3 +115,12 @@ model Product {
   @@index([storeId])
   @@map("products")
 }
+
+model OAuthState {
+  shop      String   @id
+  state     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("oauth_states")
+}

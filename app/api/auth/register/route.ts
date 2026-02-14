@@ -44,8 +44,8 @@ export async function POST(request: Request) {
     const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
     response.cookies.set(getSessionCookieName(), session.token, {
       httpOnly: true,
-      secure: isSecure,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: isSecure ? ('none' as const) : ('lax' as const),
       path: '/',
       maxAge: 60 * 60 * 24 * 30,
     });
