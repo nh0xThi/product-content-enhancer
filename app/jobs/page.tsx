@@ -29,6 +29,7 @@ import {
 import type { IndexTableProps } from '@shopify/polaris';
 import { StructureEditor } from '@/components/StructureEditor';
 import { StructurePreview } from '@/components/StructurePreview';
+import { useNotify } from '@/context/NotifyContext';
 
 interface Store {
   id: string;
@@ -75,6 +76,7 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [expandedJobIds, setExpandedJobIds] = useState<Set<string>>(new Set());
+  const notify = useNotify();
 
   useEffect(() => {
     fetchJobs();
@@ -117,12 +119,12 @@ export default function JobsPage() {
 
   const handleImportJobs = async (jobIds: string[]) => {
     if (!selectedStoreId) {
-      alert('Please select a store to import into.');
+      notify.warning('Please select a store to import into.');
       return;
     }
 
     if (jobIds.length === 0) {
-      alert('Please select at least one job to import.');
+      notify.warning('Please select at least one job to import.');
       return;
     }
 
@@ -163,18 +165,19 @@ export default function JobsPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error || 'Import failed.');
+        notify.error(data.error || 'Import failed.');
         return;
       }
 
       const errorsCount = data.errors?.length || 0;
       const message = `Imported ${data.importedCount} of ${data.total} jobs.${errorsCount ? ` ${errorsCount} failed.` : ''}`;
-      alert(message);
+      if (errorsCount) notify.warning(message);
+      else notify.success(message);
       setSelectedJobIds(new Set());
       fetchJobs();
     } catch (error) {
       console.error('Error importing jobs:', error);
-      alert('Error importing jobs.');
+      notify.error('Error importing jobs.');
     } finally {
       setImportingBulk(false);
       setImportingJobIds((prev) => {
@@ -187,12 +190,12 @@ export default function JobsPage() {
 
   const handleUndoJobs = async (jobIds: string[]) => {
     if (!selectedStoreId) {
-      alert('Please select a store to undo.');
+      notify.warning('Please select a store to undo.');
       return;
     }
 
     if (jobIds.length === 0) {
-      alert('Please select at least one job to undo.');
+      notify.warning('Please select at least one job to undo.');
       return;
     }
 
@@ -230,18 +233,19 @@ export default function JobsPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error || 'Undo failed.');
+        notify.error(data.error || 'Undo failed.');
         return;
       }
 
       const errorsCount = data.errors?.length || 0;
       const message = `Restored ${data.restoredCount} of ${data.total} jobs.${errorsCount ? ` ${errorsCount} failed.` : ''}`;
-      alert(message);
+      if (errorsCount) notify.warning(message);
+      else notify.success(message);
       setSelectedJobIds(new Set());
       fetchJobs();
     } catch (error) {
       console.error('Error undoing jobs:', error);
-      alert('Error undoing jobs.');
+      notify.error('Error undoing jobs.');
     } finally {
       setUndoingBulk(false);
       setUndoingJobIds((prev) => {
@@ -331,7 +335,7 @@ export default function JobsPage() {
       }
     } catch (error) {
       console.error('Error deleting job:', error);
-      alert('Error deleting job');
+      notify.error('Error deleting job');
     }
   };
 
@@ -346,13 +350,13 @@ export default function JobsPage() {
           ? original.products
           : null;
         if (!batchItems) {
-          alert('Batch item data not found.');
+          notify.warning('Batch item data not found.');
           return;
         }
 
         const idx = batchItems.findIndex((item: any) => item?.productId === selectedBatchItem.productId);
         if (idx === -1) {
-          alert('Batch item not found.');
+          notify.warning('Batch item not found.');
           return;
         }
 
@@ -386,13 +390,13 @@ export default function JobsPage() {
           setSelectedBatchItem(updatedItem);
           editBaselineRef.current = JSON.stringify(dndData || { content: [], root: { props: {} } });
           fetchJobs();
-          alert('Batch item saved successfully!');
+          notify.success('Batch item saved successfully!');
         } else {
-          alert('Error saving batch item');
+          notify.error('Error saving batch item');
         }
       } catch (error) {
         console.error('Error saving batch item:', error);
-        alert('Error saving batch item');
+        notify.error('Error saving batch item');
       }
       return;
     }
@@ -412,11 +416,11 @@ export default function JobsPage() {
         setSelectedJob(data.job);
         fetchJobs();
         editBaselineRef.current = JSON.stringify(dndData || { content: [], root: { props: {} } });
-        alert('Job saved successfully!');
+        notify.success('Job saved successfully!');
       }
     } catch (error) {
       console.error('Error saving job:', error);
-      alert('Error saving job');
+      notify.error('Error saving job');
     }
   };
 
@@ -487,7 +491,7 @@ export default function JobsPage() {
 
   const handleImportBatchItem = async (job: Job, item: any) => {
     if (!selectedStoreId) {
-      alert('Please select a store to import into.');
+      notify.warning('Please select a store to import into.');
       return;
     }
     const storeName = stores.find((store) => store.id === selectedStoreId)?.name
@@ -511,14 +515,15 @@ export default function JobsPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error || 'Import failed.');
+        notify.error(data.error || 'Import failed.');
         return;
       }
+      notify.success('Batch item imported.');
       fetchJobs();
       refreshSelectedJob(job.id);
     } catch (error) {
       console.error('Error importing batch item:', error);
-      alert('Error importing batch item.');
+      notify.error('Error importing batch item.');
     } finally {
       setImportingBatchItemIds((prev) => {
         const next = new Set(Array.from(prev));
@@ -530,7 +535,7 @@ export default function JobsPage() {
 
   const handleUndoBatchItem = async (job: Job, item: any) => {
     if (!selectedStoreId) {
-      alert('Please select a store to undo.');
+      notify.warning('Please select a store to undo.');
       return;
     }
     if (!confirm(`Undo will restore the original description for "${item.productTitle}". Continue?`)) {
@@ -551,14 +556,15 @@ export default function JobsPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error || 'Undo failed.');
+        notify.error(data.error || 'Undo failed.');
         return;
       }
+      notify.success('Batch item restored.');
       fetchJobs();
       refreshSelectedJob(job.id);
     } catch (error) {
       console.error('Error undoing batch item:', error);
-      alert('Error undoing batch item.');
+      notify.error('Error undoing batch item.');
     } finally {
       setUndoingBatchItemIds((prev) => {
         const next = new Set(Array.from(prev));

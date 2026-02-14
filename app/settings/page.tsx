@@ -13,9 +13,11 @@ import {
   Text,
 } from '@shopify/polaris';
 import { getSettings, saveSettings } from '@/lib/settings';
+import { useNotify } from '@/context/NotifyContext';
 
 export default function SettingsPage() {
   const router = useRouter();
+  const notify = useNotify();
   const [perplexityKey, setPerplexityKey] = useState('');
   const [logo, setLogo] = useState<string>('');
   const [favicon, setFavicon] = useState<string>('');
@@ -54,18 +56,19 @@ export default function SettingsPage() {
     try {
       saveSettings({ logo, favicon, shopName });
       window.dispatchEvent(new Event('settingsUpdated'));
-      setTimeout(() => {
-        setSaving(false);
-      }, 300);
+      notify.success('Settings saved.');
     } catch (error) {
       console.error('Error saving settings:', error);
-      setSaving(false);
+      notify.error('Failed to save settings.');
+    } finally {
+      setTimeout(() => setSaving(false), 300);
     }
   };
 
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
+      notify.success('Signed out.');
     } finally {
       router.push('/login');
     }

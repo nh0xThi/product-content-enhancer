@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Page, Card, BlockStack, TextField, Button, Text, InlineStack } from '@shopify/polaris';
+import { useNotify } from '@/context/NotifyContext';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const notify = useNotify();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -15,6 +17,7 @@ export default function RegisterPage() {
   const handleSubmit = async () => {
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      notify.warning('Passwords do not match');
       return;
     }
     setLoading(true);
@@ -27,12 +30,16 @@ export default function RegisterPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data?.error || 'Registration failed');
+        const msg = data?.error || 'Registration failed';
+        setError(msg);
+        notify.error(msg);
         return;
       }
+      notify.success('Account created. Welcome!');
       router.push('/dashboard');
     } catch (err) {
       setError('Registration failed');
+      notify.error('Registration failed');
     } finally {
       setLoading(false);
     }

@@ -22,6 +22,7 @@ import { StructureBuilder } from '@/components/StructureBuilder';
 import { StructurePreview } from '@/components/StructurePreview';
 import { Product } from '@/types';
 import { CheckIcon } from '@shopify/polaris-icons';
+import { useNotify } from '@/context/NotifyContext';
 
 interface Store {
   id: string;
@@ -72,6 +73,7 @@ export default function GeneratePage() {
   const [loadingAll, setLoadingAll] = useState(false);
   const [productsTotalCount, setProductsTotalCount] = useState<number | null>(null);
   const [currentPageProductIds, setCurrentPageProductIds] = useState<string[]>([]);
+  const notify = useNotify();
 
   const getStoredDescription = (storeId: string) => {
     try {
@@ -316,13 +318,13 @@ export default function GeneratePage() {
         setShowSaveTemplate(false);
         setTemplateName('');
         setTemplateDescription('');
-        alert('Template saved successfully!');
+        notify.success('Template saved successfully!');
       } else {
-        alert('Error saving template');
+        notify.error('Error saving template');
       }
     } catch (error) {
       console.error('Error saving template:', error);
-      alert('Error saving template');
+      notify.error('Error saving template');
     } finally {
       setSavingTemplate(false);
     }
@@ -339,7 +341,7 @@ export default function GeneratePage() {
       }
     } catch (error) {
       console.error('Error loading template:', error);
-      alert('Error loading template');
+      notify.error('Error loading template');
     }
   };
 
@@ -354,11 +356,11 @@ export default function GeneratePage() {
       if (response.ok) {
         await fetchTemplates();
       } else {
-        alert('Error deleting template');
+        notify.error('Error deleting template');
       }
     } catch (error) {
       console.error('Error deleting template:', error);
-      alert('Error deleting template');
+      notify.error('Error deleting template');
     }
   };
 
@@ -436,6 +438,7 @@ export default function GeneratePage() {
           console.warn('Failed to persist token usage:', err);
         }
 
+        notify.success('Bulk generation started. Check the Jobs page for progress.');
         router.push(`/jobs`);
         return;
       }
@@ -478,18 +481,19 @@ export default function GeneratePage() {
         if (data.dndData) {
           setDndData(data.dndData);
         }
+        notify.success('Content generated successfully.');
         router.push(`/jobs`);
         return;
       }
 
       if (data.error) {
-        alert(`Error: ${data.error}`);
+        notify.error(data.error);
       } else {
-        alert('Content generation failed. Please try again.');
+        notify.error('Content generation failed. Please try again.');
       }
     } catch (error) {
       console.error('Error generating content:', error);
-      alert('Error generating content. Please try again.');
+      notify.error('Error generating content. Please try again.');
     } finally {
       setGenerating(false);
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useNotify } from '@/context/NotifyContext';
 import {
   Page,
   Layout,
@@ -25,6 +26,7 @@ interface ConnectedStore {
 }
 
 export default function DashboardPage() {
+  const notify = useNotify();
   const [connectedStores, setConnectedStores] = useState<ConnectedStore[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConnectStoreModal, setShowConnectStoreModal] = useState(false);
@@ -39,8 +41,11 @@ export default function DashboardPage() {
         setConnectedStores(data.stores || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => {
+        setLoading(false);
+        notify.error('Failed to load stores.');
+      });
+  }, [notify]);
 
   useEffect(() => {
     const loadTokens = () => {

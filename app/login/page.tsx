@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Page, Card, BlockStack, TextField, Button, Text, InlineStack } from '@shopify/polaris';
+import { useNotify } from '@/context/NotifyContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const notify = useNotify();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,12 +24,16 @@ export default function LoginPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data?.error || 'Login failed');
+        const msg = data?.error || 'Login failed';
+        setError(msg);
+        notify.error(msg);
         return;
       }
+      notify.success('Signed in successfully.');
       router.push('/dashboard');
     } catch (err) {
       setError('Login failed');
+      notify.error('Login failed');
     } finally {
       setLoading(false);
     }

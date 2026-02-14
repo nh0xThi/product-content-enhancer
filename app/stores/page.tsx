@@ -16,6 +16,7 @@ import {
   Badge,
 } from '@shopify/polaris';
 import { StoreIcon } from '@shopify/polaris-icons';
+import { useNotify } from '@/context/NotifyContext';
 
 interface ConnectedStore {
   id: string;
@@ -27,6 +28,7 @@ interface ConnectedStore {
 }
 
 export default function StoresPage() {
+  const notify = useNotify();
   const [stores, setStores] = useState<ConnectedStore[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConnectStoreModal, setShowConnectStoreModal] = useState(false);
@@ -81,9 +83,14 @@ export default function StoresPage() {
       if (response.ok) {
         const data = await fetch('/api/stores').then((res) => res.json());
         setStores(data.stores || []);
+        notify.success('Store disconnected.');
+      } else {
+        const data = await response.json().catch(() => ({}));
+        notify.error(data?.error || 'Failed to disconnect store.');
       }
     } catch (error) {
       console.error('Error disconnecting store:', error);
+      notify.error('Failed to disconnect store.');
     }
   };
 
