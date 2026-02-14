@@ -5,35 +5,113 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
-// This schema uses PostgreSQL for production (Neon, Render, or any PostgreSQL provider).
-// Set DATABASE_URL environment variable:
-// - Development: Use local PostgreSQL or SQLite (requires schema change)
-// - Production (Neon): "postgresql://user:password@ep-xxxxx.region.aws.neon.tech/neondb?sslmode=require"
-// - Production (Render): "postgresql://user:password@host:port/database"
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+model Store {
+  id          String   @id @default(cuid())
+  shop        String   @unique
+  name        String?
+  accessToken String
+  status      String   @default("active") // active, inactive
+  connectedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  memberships UserStore[]
+  jobs        Job[]
+  products    Product[]
+
+  @@index([shop])
+  @@map("stores")
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  sessions     Session[]
+  stores       UserStore[]
+  templates    Template[]
+
+  @@map("users")
+}
+
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime?
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
-  refreshToken        String?
-  refreshTokenExpires DateTime?
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model UserStore {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  role      String   @default("member") // member, admin
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+  @@map("user_stores")
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  data        Json     // Dnd data structure
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("templates")
+}
+
+model Job {
+  id            String   @id @default(cuid())
+  storeId       String
+  productId     String
+  productTitle  String
+  productVendor String?
+  productType   String?
+  status        String   @default("pending") // pending, completed, failed
+  productStatus String?  // content pass, needed improve, ai generated, ai content imported
+  generatedHtml String?  // Generated HTML content
+  dndData      Json?    // Dnd data structure
+  originalProduct Json?  // Original product data
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([storeId])
+  @@index([status])
+  @@map("jobs")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  storeId     String
+  shopifyId   String
+  status      String?  // content pass, needed improve, ai generated, ai content imported
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([shopifyId, storeId])
+  @@index([shopifyId])
+  @@index([storeId])
+  @@map("products")
 }

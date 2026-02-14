@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  --app-bg: #f4f6f8;
+  --app-surface: #ffffff;
+  --app-border: #e5e7eb;
+  --app-border-focus: #5c5f62;
+  --app-text: #202223;
+  --app-text-subdued: #6d7175;
+  --app-radius: 12px;
+  --app-radius-sm: 8px;
+  --app-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  --app-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --app-content-padding: 1rem;
+  --app-content-padding-md: 1.25rem;
+  --app-content-padding-lg: 1.5rem;
+  --app-content-padding-xl: 1.75rem;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Page container: full width */
+[class*="Polaris-Page"] {
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Scroll areas: show scrollbar only when needed, thin and unobtrusive */
+.app-scroll-area {
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+/* Thin scrollbars where supported (Chrome, Safari, Edge) */
+.app-scroll-area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--app-border);
+  border-radius: 4px;
+}
+
+.app-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--app-text-subdued);
+}
+
+/* Firefox */
+.app-scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border) transparent;
+}

@@ -1,0 +1,22 @@
+name = "product-content-enhancer-worker"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+
+[vars]
+APP_BASE_URL = "https://your-app-domain.com"
+WORKER_SECRET = "replace-with-strong-secret"
+SHOPIFY_API_VERSION = "2024-10"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pce-bulk-jobs"
+database_id = "replace-with-d1-id"
+
+[[queues.producers]]
+binding = "QUEUE"
+queue = "bulk-jobs"
+
+[[queues.consumers]]
+queue = "bulk-jobs"
+max_batch_size = 1
+max_batch_timeout = 30
