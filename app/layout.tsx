@@ -2,7 +2,6 @@ import "./globals.css";
 import "./styles.css";
 import "@shopify/polaris/build/esm/styles.css";
 import { Metadata } from 'next';
-import Script from 'next/script';
 import FaviconUpdater from '@/components/FaviconUpdater';
 import PolarisProvider from '@/components/PolarisProvider';
 
@@ -21,11 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Shopify requires App Bridge as the first script, no async/defer/type=module */}
         {shopifyApiKey && (
-          <Script
+          <script
             src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
             data-api-key={shopifyApiKey}
-            strategy="beforeInteractive"
+            suppressHydrationWarning
           />
         )}
       </head>
