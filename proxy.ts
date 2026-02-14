@@ -44,7 +44,7 @@ export async function proxy(req: NextRequest) {
 
     // Disable "/dnd/[...dndPath]"
     if (pathname.startsWith("/dnd")) {
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/app/dashboard", req.url));
     }
   }
 

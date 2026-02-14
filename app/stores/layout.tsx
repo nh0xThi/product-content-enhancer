@@ -1,7 +1,14 @@
-import DashboardLayout from '@/components/layouts/DashboardLayout';
+'use client';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { AppBasePathProvider } from '@/context/AppBasePathContext';
+
+export default function ExternalStoresLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardLayout>{children}</DashboardLayout>
+    <AppBasePathProvider basePath="">
+      <DashboardLayout basePath="" variant="external">
+        {children}
+      </DashboardLayout>
+    </AppBasePathProvider>
   );
 }

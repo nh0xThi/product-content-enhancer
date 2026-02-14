@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Frame,
   Navigation,
-  Box,
-  BlockStack,
 } from '@shopify/polaris';
 import {
   HomeIcon,
@@ -19,18 +17,24 @@ import { getSettings } from '@/lib/settings';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  /** Base path for nav links: "" for external (e.g. /dashboard), "/app" for embedded. */
+  basePath?: string;
+  /** "external" = always show sidebar; "embedded" = hide sidebar when inside Shopify (host param). */
+  variant?: 'external' | 'embedded';
 }
 
 const navItems = [
-  { url: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { url: '/generate', label: 'Generate Content', icon: ContentIcon },
-  { url: '/jobs', label: 'Jobs', icon: ListBulletedIcon },
-  { url: '/stores', label: 'Stores', icon: StoreIcon },
-  { url: '/settings', label: 'Settings', icon: SettingsIcon },
+  { path: '/dashboard', label: 'Dashboard', icon: HomeIcon },
+  { path: '/generate', label: 'Generate Content', icon: ContentIcon },
+  { path: '/jobs', label: 'Jobs', icon: ListBulletedIcon },
+  { path: '/stores', label: 'Stores', icon: StoreIcon },
+  { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded' }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isEmbeddedInShopify = !!searchParams.get('host');
   const [logo, setLogo] = useState<string>('');
   const [shopName, setShopName] = useState<string>('');
 
@@ -46,11 +50,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
 
+  if (variant === 'embedded' && isEmbeddedInShopify) {
+    return (
+      <div className="mx-auto w-full max-w-screen-2xl">
+        {children}
+      </div>
+    );
+  }
+
   const frameLogo = logo
     ? {
         topBarSource: logo,
         contextualSaveBarSource: logo,
-        url: '/dashboard',
+        url: basePath + '/dashboard',
         accessibilityLabel: shopName || 'App logo',
         width: 124,
       }
@@ -58,27 +70,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navMarkup = (
     <Navigation location={pathname || '/'}>
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Navigation.Item
-            key={item.url}
-            url={item.url}
-            label={item.label}
-            icon={Icon}
-          />
-        );
-      })}
+      {navItems.map((item) => (
+        <Navigation.Item
+          key={item.path}
+          url={basePath + item.path}
+          label={item.label}
+          icon={item.icon}
+        />
+      ))}
     </Navigation>
   );
 
   return (
-    <Frame logo={frameLogo} navigation={navMarkup} >
+    <Frame logo={frameLogo} navigation={navMarkup}>
       <div className="mx-auto w-full max-w-screen-2xl">
-        {/* <BlockStack gap="500"> */}
-          {children}
-        {/* </BlockStack> */}
+        {children}
       </div>
     </Frame>
+  );
+}
+
+export default function DashboardLayout(props: DashboardLayoutProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto w-full max-w-screen-2xl">
+          {props.children}
+        </div>
+      }
+    >
+      <DashboardLayoutInner {...props} />
+    </Suspense>
   );
 }

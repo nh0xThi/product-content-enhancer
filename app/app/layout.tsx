@@ -1,12 +1,12 @@
-'use client';
-
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { AppBasePathProvider } from '@/context/AppBasePathContext';
 
-export default function ExternalSettingsLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = 'force-dynamic';
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppBasePathProvider basePath="">
-      <DashboardLayout basePath="" variant="external">
+    <AppBasePathProvider basePath="/app">
+      <DashboardLayout basePath="/app" variant="embedded">
         {children}
       </DashboardLayout>
     </AppBasePathProvider>

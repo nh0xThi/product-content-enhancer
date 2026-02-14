@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
         const sessionCookieName = getSessionCookieName();
         const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
         const sameSite = isSecure ? ('none' as const) : ('lax' as const);
-        const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url));
+        const redirectResponse = NextResponse.redirect(new URL('/app/dashboard', request.url));
         redirectResponse.cookies.set(sessionCookieName, token, {
           httpOnly: true,
           secure: true,
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Logged-in user connected another store — redirect to stores list
-    const redirectResponse = NextResponse.redirect(new URL('/stores', request.url));
+    const redirectResponse = NextResponse.redirect(new URL('/app/stores', request.url));
     const sameSite = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' ? ('none' as const) : ('lax' as const);
     console.log('Store connected successfully:', {
       shop: shopDomain,

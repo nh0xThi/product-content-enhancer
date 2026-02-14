@@ -1,13 +1,14 @@
+'use client';
+
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { AppBasePathProvider } from '@/context/AppBasePathContext';
 
-export const dynamic = 'force-dynamic';
-
-export default function JobsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ExternalJobsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardLayout>{children}</DashboardLayout>
+    <AppBasePathProvider basePath="">
+      <DashboardLayout basePath="" variant="external">
+        {children}
+      </DashboardLayout>
+    </AppBasePathProvider>
   );
 }
