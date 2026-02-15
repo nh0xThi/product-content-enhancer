@@ -77,8 +77,9 @@ export async function GET(request: NextRequest) {
       // Continue with shop name as fallback
     }
 
-    // Save or update store in database
+    // App installation = store connection: save/update store in database
     const shopDomain = `${shop}.myshopify.com`;
+    const now = new Date();
     let storeRecord;
     try {
       storeRecord = await prisma.store.upsert({
@@ -87,7 +88,8 @@ export async function GET(request: NextRequest) {
           accessToken: access_token,
           name: shopName,
           status: 'active',
-          updatedAt: new Date(),
+          connectedAt: now, // Each install/reinstall is a connection event
+          updatedAt: now,
         },
         create: {
           shop: shopDomain,
@@ -96,11 +98,13 @@ export async function GET(request: NextRequest) {
           status: 'active',
         },
       });
-      console.log('Store saved to database:', shopDomain);
+      console.log('Store connected (install/oauth):', shopDomain);
     } catch (dbError) {
       console.error('Error saving store to database:', dbError);
-      // Continue with redirect even if DB save fails
-      // The access token is still in cookies for immediate use
+      return NextResponse.json(
+        { error: 'Failed to connect store. Please try again.' },
+        { status: 500 }
+      );
     }
 
     if (storeRecord) {
