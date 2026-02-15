@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
@@ -43,7 +43,7 @@ interface Template {
 
 type Step = 1 | 2 | 3;
 
-export default function GeneratePage() {
+function GeneratePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const basePath = useAppBasePath();
@@ -1060,5 +1060,13 @@ export default function GeneratePage() {
         </Modal>
       </Layout>
     </Page>
+  );
+}
+
+export default function GeneratePage() {
+  return (
+    <Suspense fallback={<div />}>
+      <GeneratePageContent />
+    </Suspense>
   );
 }

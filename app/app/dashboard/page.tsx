@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useNotify } from '@/context/NotifyContext';
 import { useAppBasePath } from '@/context/AppBasePathContext';
@@ -27,7 +27,7 @@ interface ConnectedStore {
   connectedAt: string;
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const basePath = useAppBasePath();
   const searchParams = useSearchParams();
   const [isInIframe, setIsInIframe] = useState(false);
@@ -298,5 +298,13 @@ export default function DashboardPage() {
         </Modal>
       )}
     </Page>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }
