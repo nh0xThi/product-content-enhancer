@@ -52,12 +52,6 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
 
-  console.log('[DashboardLayout] basePath:', basePath);
-  console.log('[DashboardLayout] variant:', variant);
-  console.log('[DashboardLayout] pathname:', pathname);
-  console.log('[DashboardLayout] host param:', hostParam);
-  console.log('[DashboardLayout] isEmbeddedInShopify:', isEmbeddedInShopify);
-
   const withHostParam = (path: string) => {
     if (!hostParam) return path;
     const separator = path.includes('?') ? '&' : '?';
