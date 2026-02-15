@@ -30,6 +30,7 @@ import type { IndexTableProps } from '@shopify/polaris';
 import { StructureEditor } from '@/components/StructureEditor';
 import { StructurePreview } from '@/components/StructurePreview';
 import { useNotify } from '@/context/NotifyContext';
+import { fetchWithSessionToken } from '@/lib/shopifyFetch';
 
 interface Store {
   id: string;
@@ -88,7 +89,7 @@ export default function JobsPage() {
 
   const fetchStores = async () => {
     try {
-      const response = await fetch('/api/stores');
+      const response = await fetchWithSessionToken('/api/stores');
       const data = await response.json();
       const activeStores = (data.stores || []).filter((store: Store) => store.status === 'active');
       setStores(activeStores);

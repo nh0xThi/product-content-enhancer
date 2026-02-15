@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useNotify } from '@/context/NotifyContext';
+import { fetchWithSessionToken } from '@/lib/shopifyFetch';
 import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
   Page,
@@ -42,7 +43,7 @@ function DashboardPageContent() {
 
   useEffect(() => {
     setIsInIframe(typeof window !== 'undefined' && window.top !== window.self);
-    fetch('/api/stores')
+    fetchWithSessionToken('/api/stores')
       .then((res) => res.json())
       .then((data) => {
         setConnectedStores(data.stores || []);

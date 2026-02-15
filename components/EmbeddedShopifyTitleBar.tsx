@@ -3,16 +3,6 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
-declare global {
-  interface Window {
-    shopify?: {
-      navigation?: {
-        navigate: (path: string, options?: { history?: 'push' | 'replace' }) => void | Promise<unknown>;
-      };
-    };
-  }
-}
-
 export interface NavItemForTitleBar {
   path: string;
   label: string;
@@ -33,7 +23,8 @@ const APP_TITLE = 'Product Data Optimizer';
 export default function EmbeddedShopifyTitleBar({ basePath, navItems }: EmbeddedShopifyTitleBarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const hasHost = !!searchParams.get('host');
+  const hostParam = searchParams.get('host');
+  const hasHost = !!hostParam;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentNav = navItems.find((item) => pathname === basePath + item.path);
@@ -75,7 +66,6 @@ export default function EmbeddedShopifyTitleBar({ basePath, navItems }: Embedded
     const container = containerRef.current;
     const existing = document.querySelector('script[data-api-key][src*="app-bridge"]');
     if (!existing) return;
-    const hostParam = searchParams.get('host');
 
     const PageComponent = document.createElement('s-page');
     PageComponent.setAttribute('heading', pageTitle);
@@ -100,7 +90,7 @@ export default function EmbeddedShopifyTitleBar({ basePath, navItems }: Embedded
         // ignore
       }
     };
-  }, [hasHost, pageTitle, basePath]);
+  }, [hasHost, pageTitle, basePath, hostParam]);
 
   if (!hasHost) return null;
 

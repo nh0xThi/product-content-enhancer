@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getSessionFromRequest } from '@/lib/auth';
+import { verifyShopifySessionToken } from '@/lib/shopifySessionToken';
 
 /**
  * Multi-tenant isolation: All store-scoped data must be accessed only after
@@ -15,6 +16,21 @@ export const requireUser = async (request: Request) => {
 };
 
 export const requireStoreAccess = async (request: Request, storeId: string) => {
+  const authHeader = request.headers.get('authorization') || '';
+  const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (tokenMatch) {
+    const verified = verifyShopifySessionToken(tokenMatch[1]);
+    if (verified) {
+      const store = await prisma.store.findUnique({
+        where: { shop: verified.shop },
+        select: { id: true },
+      });
+      if (store && store.id === storeId) {
+        return { user: null, membership: null };
+      }
+    }
+  }
+
   const session = await getSessionFromRequest(request);
   if (!session) return null;
 

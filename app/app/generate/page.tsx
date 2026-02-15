@@ -24,6 +24,7 @@ import { StructurePreview } from '@/components/StructurePreview';
 import { Product } from '@/types';
 import { CheckIcon } from '@shopify/polaris-icons';
 import { useNotify } from '@/context/NotifyContext';
+import { fetchWithSessionToken } from '@/lib/shopifyFetch';
 
 interface Store {
   id: string;
@@ -93,7 +94,7 @@ function GeneratePageContent() {
   useEffect(() => {
     setIsInIframe(typeof window !== 'undefined' && window.top !== window.self);
     setFetchError(null);
-    fetch('/api/stores')
+    fetchWithSessionToken('/api/stores')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load stores');
         return res.json();
@@ -153,7 +154,7 @@ function GeneratePageContent() {
       const params = new URLSearchParams({ storeId: selectedStore, limit: '250' });
       if (cursor) params.set('cursor', cursor);
 
-      const response = await fetch(`/api/shopify/products?${params.toString()}`);
+      const response = await fetchWithSessionToken(`/api/shopify/products?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -423,13 +424,13 @@ function GeneratePageContent() {
         const ids = targets.map((product) => product.id);
 
         while (offset < ids.length) {
-          const response = await fetch('/api/bulk-generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              storeId: selectedStore,
-              structure: JSON.stringify({ content: structure }),
-              customPrompt: combinedPrompt || undefined,
+        const response = await fetchWithSessionToken('/api/bulk-generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storeId: selectedStore,
+            structure: JSON.stringify({ content: structure }),
+            customPrompt: combinedPrompt || undefined,
               selection: {
                 mode: 'ids',
                 ids,
@@ -475,7 +476,7 @@ function GeneratePageContent() {
         : '';
       const combinedPrompt = [storePrompt, aiPrompt].filter(Boolean).join('\n');
 
-      const response = await fetch('/api/perplexity/generate', {
+      const response = await fetchWithSessionToken('/api/perplexity/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,9 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/access';
+import { verifyShopifySessionToken } from '@/lib/shopifySessionToken';
 
 export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization') || '';
+    const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (tokenMatch) {
+      const verified = verifyShopifySessionToken(tokenMatch[1]);
+      if (verified) {
+        const store = await prisma.store.findUnique({
+          where: { shop: verified.shop },
+        });
+        if (!store || store.status !== 'active') {
+          return NextResponse.json({ stores: [] });
+        }
+        return NextResponse.json({
+          stores: [
+            {
+              id: store.id,
+              shop: store.shop,
+              name: store.name || store.shop.replace('.myshopify.com', ''),
+              connectedAt: store.connectedAt.toISOString(),
+              status: store.status as 'active' | 'inactive',
+            },
+          ],
+        });
+      }
+    }
+
     const user = await requireUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -179,6 +179,7 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         cookie: request.headers.get('cookie') || '',
+        authorization: request.headers.get('authorization') || '',
       },
       body: JSON.stringify({
         storeId,
