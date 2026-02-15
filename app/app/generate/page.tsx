@@ -717,13 +717,16 @@ export default function GeneratePage() {
                   <Text as="h2" variant="headingLg">Select product</Text>
                   <Text as="p" tone="subdued">Choose a store, fetch products, then select a product to enhance.</Text>
                   <InlineStack gap="300" blockAlign="end" wrap>
-                    {isEmbedded && stores.length === 1 ? (
+                    {isEmbedded ? (
                       <>
                         <Text as="p" tone="subdued">
-                          Store: {stores[0]?.name} ({stores[0]?.shop})
+                          Store: {stores.find((s) => s.id === selectedStore)?.name || 'Connected store'}
+                          {stores.find((s) => s.id === selectedStore)?.shop
+                            ? ` (${stores.find((s) => s.id === selectedStore)?.shop})`
+                            : ''}
                         </Text>
-                        <Button variant="secondary" loading={loading} onClick={fetchProducts}>
-                          Refresh products
+                        <Button variant="primary" loading={loading} disabled={!selectedStore} onClick={fetchProducts}>
+                          Fetch products
                         </Button>
                       </>
                     ) : (
