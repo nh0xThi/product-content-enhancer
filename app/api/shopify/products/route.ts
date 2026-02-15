@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     // Extract shop domain (remove .myshopify.com if present, then add it back)
     const shopDomain = store.shop.replace(/\.myshopify\.com$/i, '');
     const accessToken = store.accessToken;
+    console.log('[shopify/products] storeId:', storeId, 'shop:', store.shop, 'hasToken:', Boolean(accessToken));
 
     const fetchProductsQuery = async (includeCount: boolean) => {
       const response = await axios.post(
