@@ -19,6 +19,7 @@ import {
 } from '@shopify/polaris';
 import { StoreIcon } from '@shopify/polaris-icons';
 import { useNotify } from '@/context/NotifyContext';
+import { fetchWithSessionToken } from '@/lib/shopifyFetch';
 
 interface ConnectedStore {
   id: string;
@@ -67,7 +68,7 @@ export default function StoresPage() {
   };
 
   useEffect(() => {
-    fetch('/api/stores')
+    fetchWithSessionToken('/api/stores')
       .then((res) => res.json())
       .then((data) => {
         const mappedStores = (data.stores || []).map((store: ConnectedStore) => ({
@@ -89,11 +90,11 @@ export default function StoresPage() {
 
   const handleDisconnect = async (storeId: string) => {
     try {
-      const response = await fetch(`/api/stores?id=${storeId}`, {
+      const response = await fetchWithSessionToken(`/api/stores?id=${storeId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
-        const data = await fetch('/api/stores').then((res) => res.json());
+        const data = await fetchWithSessionToken('/api/stores').then((res) => res.json());
         setStores(data.stores || []);
         notify.success('Store disconnected.');
       } else {

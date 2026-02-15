@@ -4,10 +4,13 @@ import { redirect } from 'next/navigation';
 export default function Home({
   searchParams,
 }: {
-  searchParams?: { host?: string };
+  searchParams?: { host?: string; shop?: string };
 }) {
   if (searchParams?.host) {
-    redirect(`/app/dashboard?host=${encodeURIComponent(searchParams.host)}`);
+    const params = new URLSearchParams();
+    params.set('host', searchParams.host);
+    if (searchParams.shop) params.set('shop', searchParams.shop);
+    redirect(`/app/dashboard?${params.toString()}`);
   }
 
   return (

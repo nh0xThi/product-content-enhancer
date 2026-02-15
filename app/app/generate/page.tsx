@@ -142,7 +142,7 @@ function GeneratePageContent() {
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('/api/templates');
+      const response = await fetchWithSessionToken('/api/templates');
       const data = await response.json();
       setTemplates(data.templates || []);
     } catch (error) {
@@ -347,7 +347,7 @@ function GeneratePageContent() {
 
     setSavingTemplate(true);
     try {
-      const response = await fetch('/api/templates', {
+      const response = await fetchWithSessionToken('/api/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -376,7 +376,7 @@ function GeneratePageContent() {
 
   const handleLoadTemplate = async (templateId: string) => {
     try {
-      const response = await fetch(`/api/templates/${templateId}`);
+      const response = await fetchWithSessionToken(`/api/templates/${templateId}`);
       const data = await response.json();
 
       if (data.template) {
@@ -393,7 +393,7 @@ function GeneratePageContent() {
     if (!confirm('Are you sure you want to delete this template?')) return;
 
     try {
-      const response = await fetch(`/api/templates/${templateId}`, {
+      const response = await fetchWithSessionToken(`/api/templates/${templateId}`, {
         method: 'DELETE',
       });
 

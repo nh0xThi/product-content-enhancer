@@ -30,10 +30,10 @@ export const getAccessibleStoreIds = async (request: Request): Promise<string[] 
         ? verified.shop
         : `${verified.shop.replace(/\.myshopify\.com$/i, '')}.myshopify.com`;
       const store = await prisma.store.findUnique({
-        where: { shop: shopDomain, status: 'active' },
-        select: { id: true },
+        where: { shop: shopDomain },
+        select: { id: true, status: true },
       });
-      if (store) return [store.id];
+      if (store && store.status === 'active') return [store.id];
     }
   }
 
@@ -53,11 +53,14 @@ export const requireStoreAccess = async (request: Request, storeId: string) => {
   if (tokenMatch) {
     const verified = verifyShopifySessionToken(tokenMatch[1]);
     if (verified) {
+      const shopDomain = verified.shop.includes('.myshopify.com')
+        ? verified.shop
+        : `${verified.shop.replace(/\.myshopify\.com$/i, '')}.myshopify.com`;
       const store = await prisma.store.findUnique({
-        where: { shop: verified.shop },
-        select: { id: true },
+        where: { shop: shopDomain },
+        select: { id: true, status: true },
       });
-      if (store && store.id === storeId) {
+      if (store && store.id === storeId && store.status === 'active') {
         return { user: null, membership: null };
       }
     }
