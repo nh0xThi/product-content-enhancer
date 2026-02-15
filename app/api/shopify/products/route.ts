@@ -60,7 +60,7 @@ export async function GET(request: Request) {
                   node {
                     id
                     title
-                    description
+                    description: descriptionHtml
                     handle
                     vendor
                     productType

@@ -46,7 +46,7 @@ export async function POST(request: Request) {
                   node {
                     id
                     title
-                    description
+                    description: descriptionHtml
                     handle
                     vendor
                     productType
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
                 ... on Product {
                   id
                   title
-                  description
+                  description: descriptionHtml
                   handle
                   vendor
                   productType

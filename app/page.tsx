@@ -6,9 +6,7 @@ export default function Home({
 }: {
   searchParams?: { host?: string };
 }) {
-  console.log('[Home] searchParams.host:', searchParams?.host);
   if (searchParams?.host) {
-    console.log('[Home] embedded detected, redirecting to /app/dashboard');
     redirect(`/app/dashboard?host=${encodeURIComponent(searchParams.host)}`);
   }
 
