@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useNotify } from '@/context/NotifyContext';
 import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
@@ -28,7 +29,9 @@ interface ConnectedStore {
 
 export default function DashboardPage() {
   const basePath = useAppBasePath();
-  const isEmbedded = basePath === '/app';
+  const searchParams = useSearchParams();
+  const [isInIframe, setIsInIframe] = useState(false);
+  const isEmbedded = basePath === '/app' && (Boolean(searchParams.get('host')) || isInIframe);
   const notify = useNotify();
   const [connectedStores, setConnectedStores] = useState<ConnectedStore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ export default function DashboardPage() {
   const [totalTokens, setTotalTokens] = useState(0);
 
   useEffect(() => {
+    setIsInIframe(typeof window !== 'undefined' && window.top !== window.self);
     fetch('/api/stores')
       .then((res) => res.json())
       .then((data) => {

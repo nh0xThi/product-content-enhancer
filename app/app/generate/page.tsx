@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
   Page,
@@ -45,8 +45,10 @@ type Step = 1 | 2 | 3;
 
 export default function GeneratePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const basePath = useAppBasePath();
-  const isEmbedded = basePath === '/app';
+  const [isInIframe, setIsInIframe] = useState(false);
+  const isEmbedded = basePath === '/app' && (Boolean(searchParams.get('host')) || isInIframe);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [selectedStoreDescription, setSelectedStoreDescription] = useState<string>('');
@@ -89,6 +91,7 @@ export default function GeneratePage() {
   };
 
   useEffect(() => {
+    setIsInIframe(typeof window !== 'undefined' && window.top !== window.self);
     setFetchError(null);
     fetch('/api/stores')
       .then((res) => {
