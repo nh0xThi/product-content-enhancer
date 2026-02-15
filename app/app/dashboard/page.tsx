@@ -28,6 +28,7 @@ interface ConnectedStore {
 
 export default function DashboardPage() {
   const basePath = useAppBasePath();
+  const isEmbedded = basePath === '/app';
   const notify = useNotify();
   const [connectedStores, setConnectedStores] = useState<ConnectedStore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,9 +187,11 @@ export default function DashboardPage() {
                   <Text as="h2" variant="headingLg">
                     Connected Stores
                   </Text>
-                  <Button variant="primary" icon={StoreIcon} onClick={() => setShowConnectStoreModal(true)} size="slim">
-                    Connect Store
-                  </Button>
+                  {!isEmbedded && (
+                    <Button variant="primary" icon={StoreIcon} onClick={() => setShowConnectStoreModal(true)} size="slim">
+                      Connect Store
+                    </Button>
+                  )}
                 </div>
 
                 {loading ? (
@@ -199,12 +202,12 @@ export default function DashboardPage() {
                   <EmptyState
                     heading="No stores connected yet"
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-                    action={{
-                      content: 'Connect Your First Store',
-                      onAction: () => setShowConnectStoreModal(true),
-                    }}
                   >
-                    <p>Connect a Shopify store to start generating product content.</p>
+                    <p>
+                      {isEmbedded
+                        ? 'Your store should be connected via Shopify admin. If this is unexpected, reinstall the app.'
+                        : 'Connect a Shopify store to start generating product content.'}
+                    </p>
                   </EmptyState>
                 ) : (
                   <BlockStack gap="300">
@@ -251,43 +254,45 @@ export default function DashboardPage() {
         </Layout.Section>
       </Layout>
 
-      <Modal
-        open={showConnectStoreModal}
-        onClose={() => {
-          setShowConnectStoreModal(false);
-          setNewStoreShop('');
-          setNewStoreName('');
-        }}
-        title="Connect New Store"
-        primaryAction={{
-          content: 'Connect Store',
-          onAction: handleConnectStore,
-          disabled: !newStoreShop?.trim(),
-        }}
-      >
-        <Modal.Section>
-          <BlockStack gap="400">
-            <Text as="p" tone="subdued">
-              You will be redirected to Shopify to authorize this app. After
-              authorization, you&apos;ll be redirected back.
-            </Text>
-            <TextField
-              label="Store domain"
-              value={newStoreShop}
-              onChange={setNewStoreShop}
-              placeholder="your-store (without .myshopify.com)"
-              autoComplete="off"
-            />
-            <TextField
-              label="Store name (optional)"
-              value={newStoreName}
-              onChange={setNewStoreName}
-              placeholder="My Store"
-              autoComplete="off"
-            />
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
+      {!isEmbedded && (
+        <Modal
+          open={showConnectStoreModal}
+          onClose={() => {
+            setShowConnectStoreModal(false);
+            setNewStoreShop('');
+            setNewStoreName('');
+          }}
+          title="Connect New Store"
+          primaryAction={{
+            content: 'Connect Store',
+            onAction: handleConnectStore,
+            disabled: !newStoreShop?.trim(),
+          }}
+        >
+          <Modal.Section>
+            <BlockStack gap="400">
+              <Text as="p" tone="subdued">
+                You will be redirected to Shopify to authorize this app. After
+                authorization, you&apos;ll be redirected back.
+              </Text>
+              <TextField
+                label="Store domain"
+                value={newStoreShop}
+                onChange={setNewStoreShop}
+                placeholder="your-store (without .myshopify.com)"
+                autoComplete="off"
+              />
+              <TextField
+                label="Store name (optional)"
+                value={newStoreName}
+                onChange={setNewStoreName}
+                placeholder="My Store"
+                autoComplete="off"
+              />
+            </BlockStack>
+          </Modal.Section>
+        </Modal>
+      )}
     </Page>
   );
 }

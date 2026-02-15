@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
@@ -46,6 +46,7 @@ type Step = 1 | 2 | 3;
 export default function GeneratePage() {
   const router = useRouter();
   const basePath = useAppBasePath();
+  const isEmbedded = basePath === '/app';
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [selectedStoreDescription, setSelectedStoreDescription] = useState<string>('');
@@ -76,6 +77,7 @@ export default function GeneratePage() {
   const [productsTotalCount, setProductsTotalCount] = useState<number | null>(null);
   const [currentPageProductIds, setCurrentPageProductIds] = useState<string[]>([]);
   const notify = useNotify();
+  const autoFetchedStoreIdRef = useRef<string | null>(null);
 
   const getStoredDescription = (storeId: string) => {
     try {
@@ -132,6 +134,7 @@ export default function GeneratePage() {
     setProductsCursor(null);
     setProductsHasNext(false);
     setProductsTotalCount(null);
+    autoFetchedStoreIdRef.current = null;
   };
 
   const fetchProductsPage = async (cursor: string | null) => {
@@ -215,6 +218,13 @@ export default function GeneratePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isEmbedded || stores.length !== 1 || !selectedStore) return;
+    if (autoFetchedStoreIdRef.current === selectedStore) return;
+    autoFetchedStoreIdRef.current = selectedStore;
+    void fetchProducts();
+  }, [isEmbedded, stores, selectedStore]);
 
   const fetchMoreProducts = async () => {
     if (!selectedStore || !productsHasNext || loadingMore) return;
@@ -707,21 +717,34 @@ export default function GeneratePage() {
                   <Text as="h2" variant="headingLg">Select product</Text>
                   <Text as="p" tone="subdued">Choose a store, fetch products, then select a product to enhance.</Text>
                   <InlineStack gap="300" blockAlign="end" wrap>
-                    <Box minWidth="220px">
-                      <Select
-                        label="Store"
-                        labelInline
-                        options={[
-                          { label: 'Select a store', value: '' },
-                          ...stores.map((s) => ({ label: `${s.name} (${s.shop})`, value: s.id })),
-                        ]}
-                        value={selectedStore}
-                        onChange={handleStoreChange}
-                      />
-                    </Box>
-                    <Button variant="primary" loading={loading} disabled={!selectedStore} onClick={fetchProducts}>
-                      Fetch products
-                    </Button>
+                    {isEmbedded && stores.length === 1 ? (
+                      <>
+                        <Text as="p" tone="subdued">
+                          Store: {stores[0]?.name} ({stores[0]?.shop})
+                        </Text>
+                        <Button variant="secondary" loading={loading} onClick={fetchProducts}>
+                          Refresh products
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Box minWidth="220px">
+                          <Select
+                            label="Store"
+                            labelInline
+                            options={[
+                              { label: 'Select a store', value: '' },
+                              ...stores.map((s) => ({ label: `${s.name} (${s.shop})`, value: s.id })),
+                            ]}
+                            value={selectedStore}
+                            onChange={handleStoreChange}
+                          />
+                        </Box>
+                        <Button variant="primary" loading={loading} disabled={!selectedStore} onClick={fetchProducts}>
+                          Fetch products
+                        </Button>
+                      </>
+                    )}
                   </InlineStack>
                   {selectedStoreDescription ? (
                     <Box padding="300" background="bg-surface-secondary" borderRadius="200">
