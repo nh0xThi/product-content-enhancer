@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
         const redirectResponse = NextResponse.redirect(new URL('/app/dashboard', request.url));
         redirectResponse.cookies.set(sessionCookieName, token, {
           httpOnly: true,
-          secure: true,
+          secure: isSecure,
           sameSite,
           path: '/',
           maxAge: 60 * 60 * 24 * 30,
@@ -167,14 +167,14 @@ export async function GET(request: NextRequest) {
         });
         redirectResponse.cookies.set('shopify_access_token', access_token, {
           httpOnly: true,
-          secure: true,
+          secure: isSecure,
           sameSite,
           path: '/',
           maxAge: 60 * 60 * 24 * 30,
         });
         redirectResponse.cookies.set('shopify_shop', shop, {
           httpOnly: true,
-          secure: true,
+          secure: isSecure,
           sameSite,
           path: '/',
           maxAge: 60 * 60 * 24 * 30,
@@ -186,7 +186,8 @@ export async function GET(request: NextRequest) {
 
     // Logged-in user connected another store — redirect to stores list
     const redirectResponse = NextResponse.redirect(new URL('/app/stores', request.url));
-    const sameSite = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' ? ('none' as const) : ('lax' as const);
+    const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    const sameSite = isSecure ? ('none' as const) : ('lax' as const);
     console.log('Store connected successfully:', {
       shop: shopDomain,
       name: shopName,
@@ -194,14 +195,14 @@ export async function GET(request: NextRequest) {
     });
     redirectResponse.cookies.set('shopify_access_token', access_token, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite,
       path: '/',
       maxAge: 60 * 60 * 24 * 30,
     });
     redirectResponse.cookies.set('shopify_shop', shop, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite,
       path: '/',
       maxAge: 60 * 60 * 24 * 30,

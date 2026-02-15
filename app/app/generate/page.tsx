@@ -229,11 +229,11 @@ function GeneratePageContent() {
   };
 
   useEffect(() => {
-    if (!isEmbedded || stores.length !== 1 || !selectedStore) return;
-    if (autoFetchedStoreIdRef.current === selectedStore) return;
+    if (!isEmbedded || stores.length === 0 || !selectedStore) return;
+    if (autoFetchedStoreIdRef.current === selectedStore && products.length > 0) return;
     autoFetchedStoreIdRef.current = selectedStore;
     void fetchProducts();
-  }, [isEmbedded, stores, selectedStore]);
+  }, [isEmbedded, stores, selectedStore, products.length]);
 
   const fetchMoreProducts = async () => {
     if (!selectedStore || !productsHasNext || loadingMore) return;
@@ -663,6 +663,13 @@ function GeneratePageContent() {
           <Layout.Section>
             <Banner tone="critical" onDismiss={() => setFetchError(null)}>
               {fetchError}
+            </Banner>
+          </Layout.Section>
+        ) : null}
+        {isEmbedded && !fetchError && stores.length === 0 ? (
+          <Layout.Section>
+            <Banner tone="warning">
+              No connected store was found for this session. Try reloading the app in Shopify admin. If it still fails, reinstall the app to re-establish the connection.
             </Banner>
           </Layout.Section>
         ) : null}
