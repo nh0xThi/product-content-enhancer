@@ -22,18 +22,18 @@ export default function Home({
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
-              href="/app/dashboard"
+              href="/register"
               className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 text-base font-medium text-white rounded-[var(--app-radius-sm,8px)] hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#008060] transition-opacity"
               style={{ background: '#008060' }}
             >
               Get Started
             </Link>
             <Link
-              href="/app/dashboard"
+              href="/login"
               className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 text-base font-medium rounded-[var(--app-radius-sm,8px)] border hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
               style={{ color: 'var(--app-text)', borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}
             >
-              Go to Dashboard
+              Sign in
             </Link>
           </div>
         </div>

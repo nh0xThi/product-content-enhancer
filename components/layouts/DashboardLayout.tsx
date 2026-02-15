@@ -85,8 +85,9 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
       }
     : undefined;
 
+  // Embedded app (/app/*): no store management - only the installed store; hide Stores nav
   const visibleNavItems =
-    basePath === '/app' && isEmbeddedInShopify
+    basePath === '/app'
       ? navItems.filter((item) => item.path !== '/stores')
       : navItems;
 

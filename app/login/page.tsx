@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Page, Card, BlockStack, TextField, Button, Text, InlineStack } from '@shopify/polaris';
 import { useNotify } from '@/context/NotifyContext';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/dashboard';
   const notify = useNotify();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +32,7 @@ export default function LoginPage() {
         return;
       }
       notify.success('Signed in successfully.');
-      router.push('/dashboard');
+      router.push(redirect);
     } catch (err) {
       setError('Login failed');
       notify.error('Login failed');
@@ -71,5 +73,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </Page>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<Page title="Sign in"><div className="mx-auto w-full max-w-lg"><Card><BlockStack gap="400"><Text as="p" tone="subdued">Loading…</Text></BlockStack></Card></div></Page>}>
+      <LoginForm />
+    </Suspense>
   );
 }

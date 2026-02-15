@@ -184,8 +184,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Logged-in user connected another store — redirect to stores list
-    const redirectResponse = NextResponse.redirect(new URL('/app/stores', request.url));
+    // Logged-in user connected another store (external flow) — redirect to stores list
+    const redirectResponse = NextResponse.redirect(new URL('/stores', request.url));
     const isSecure = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
     const sameSite = isSecure ? ('none' as const) : ('lax' as const);
     console.log('Store connected successfully:', {

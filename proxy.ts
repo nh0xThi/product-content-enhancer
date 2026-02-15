@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "pce_session";
-const PUBLIC_ROUTES = new Set(["/login", "/register"]);
+const PUBLIC_ROUTES = new Set(["/", "/login", "/register"]);
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const sessionCookie = req.cookies.get(SESSION_COOKIE)?.value;
 
   if (PUBLIC_ROUTES.has(pathname)) {
-    if (sessionCookie) {
+    if (sessionCookie && (pathname === "/login" || pathname === "/register")) {
       const url = req.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
@@ -31,6 +31,7 @@ export async function proxy(req: NextRequest) {
   if (!sessionCookie) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 

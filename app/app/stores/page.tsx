@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
   Page,
   Layout,
@@ -28,8 +30,18 @@ interface ConnectedStore {
 }
 
 export default function StoresPage() {
+  const router = useRouter();
+  const basePath = useAppBasePath();
   const notify = useNotify();
   const [stores, setStores] = useState<ConnectedStore[]>([]);
+
+  // Embedded app: no store management — redirect to dashboard
+  useEffect(() => {
+    if (basePath === '/app') {
+      router.replace('/app/dashboard');
+    }
+  }, [basePath, router]);
+
   const [loading, setLoading] = useState(true);
   const [showConnectStoreModal, setShowConnectStoreModal] = useState(false);
   const [newStoreShop, setNewStoreShop] = useState('');
@@ -122,6 +134,25 @@ export default function StoresPage() {
   };
 
   const selectedStore = stores.find((store) => store.id === selectedStoreId);
+
+  // Embedded app: avoid flash before redirect
+  if (basePath === '/app') {
+    return (
+      <Page title="Redirecting…">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <Box padding="800">
+                <Text as="p" tone="subdued">
+                  Redirecting…
+                </Text>
+              </Box>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    );
+  }
 
   return (
     <Page
