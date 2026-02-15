@@ -11,7 +11,6 @@ import {
   ContentIcon,
   ListBulletedIcon,
   StoreIcon,
-  SettingsIcon,
 } from '@shopify/polaris-icons';
 import { getSettings } from '@/lib/settings';
 import EmbeddedShopifyTitleBar from '@/components/EmbeddedShopifyTitleBar';
@@ -29,7 +28,6 @@ const navItems = [
   { path: '/generate', label: 'Generate Content', icon: ContentIcon },
   { path: '/jobs', label: 'Jobs', icon: ListBulletedIcon },
   { path: '/stores', label: 'Stores', icon: StoreIcon },
-  { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
 function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded' }: DashboardLayoutProps) {
