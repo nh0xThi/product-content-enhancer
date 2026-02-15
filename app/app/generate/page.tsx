@@ -140,6 +140,12 @@ function GeneratePageContent() {
     autoFetchedStoreIdRef.current = null;
   };
 
+  useEffect(() => {
+    if (!isEmbedded || stores.length === 0 || selectedStore) return;
+    setSelectedStore(stores[0].id);
+    setSelectedStoreDescription(stores[0].description || '');
+  }, [isEmbedded, stores, selectedStore]);
+
   const fetchProductsPage = async (cursor: string | null) => {
     if (!selectedStore) return;
 
@@ -722,13 +728,22 @@ function GeneratePageContent() {
                   <InlineStack gap="300" blockAlign="end" wrap>
                     {isEmbedded ? (
                       <>
-                        <Text as="p" tone="subdued">
-                          Store: {stores.find((s) => s.id === selectedStore)?.name || 'Connected store'}
-                          {stores.find((s) => s.id === selectedStore)?.shop
-                            ? ` (${stores.find((s) => s.id === selectedStore)?.shop})`
-                            : ''}
-                        </Text>
-                        <Button variant="primary" loading={loading} disabled={!selectedStore} onClick={fetchProducts}>
+                        <Box minWidth="220px">
+                          <Select
+                            label="Store"
+                            labelInline
+                            disabled
+                            options={stores.map((s) => ({ label: `${s.name} (${s.shop})`, value: s.id }))}
+                            value={selectedStore}
+                            onChange={() => {}}
+                          />
+                        </Box>
+                        <Button
+                          variant="primary"
+                          loading={loading}
+                          disabled={!selectedStore}
+                          onClick={fetchProducts}
+                        >
                           Fetch products
                         </Button>
                       </>
