@@ -51,7 +51,11 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
     return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
   }, []);
 
-  console.log(variant, "****************", isEmbeddedInShopify)
+  console.log('[DashboardLayout] basePath:', basePath);
+  console.log('[DashboardLayout] variant:', variant);
+  console.log('[DashboardLayout] pathname:', pathname);
+  console.log('[DashboardLayout] host param:', searchParams.get('host'));
+  console.log('[DashboardLayout] isEmbeddedInShopify:', isEmbeddedInShopify);
   // Embedded in Shopify: no sidebar; nested path appears in the store's admin title bar via App Bridge
   if (variant === 'embedded' && isEmbeddedInShopify) {
     return (

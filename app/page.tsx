@@ -1,8 +1,17 @@
-'use client';
-
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
+export default function Home({
+  searchParams,
+}: {
+  searchParams?: { host?: string };
+}) {
+  console.log('[Home] searchParams.host:', searchParams?.host);
+  if (searchParams?.host) {
+    console.log('[Home] embedded detected, redirecting to /app/dashboard');
+    redirect(`/app/dashboard?host=${encodeURIComponent(searchParams.host)}`);
+  }
+
   return (
     <div className="min-h-screen w-full flex flex-col" style={{ background: 'var(--app-bg, #f4f6f8)' }}>
       <main className="flex-1 w-full max-w-none flex items-center justify-center px-6 py-16 sm:px-10 sm:py-24">
@@ -15,14 +24,14 @@ export default function Home() {
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
-              href="/dashboard"
+              href="/app/dashboard"
               className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 text-base font-medium text-white rounded-[var(--app-radius-sm,8px)] hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#008060] transition-opacity"
               style={{ background: '#008060' }}
             >
               Get Started
             </Link>
             <Link
-              href="/dashboard"
+              href="/app/dashboard"
               className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 text-base font-medium rounded-[var(--app-radius-sm,8px)] border hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
               style={{ color: 'var(--app-text)', borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}
             >
