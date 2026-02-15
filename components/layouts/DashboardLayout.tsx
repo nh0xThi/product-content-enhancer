@@ -93,9 +93,14 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
       }
     : undefined;
 
+  const visibleNavItems =
+    basePath === '/app' && isEmbeddedInShopify
+      ? navItems.filter((item) => item.path !== '/stores')
+      : navItems;
+
   const navMarkup = (
     <Navigation location={pathname || '/'}>
-      {navItems.map((item) => (
+      {visibleNavItems.map((item) => (
         <Navigation.Item
           key={item.path}
           url={withHostParam(basePath + item.path)}
