@@ -36,6 +36,7 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isEmbeddedInShopify = !!searchParams.get('host');
+  const hostParam = searchParams.get('host');
   const [logo, setLogo] = useState<string>('');
   const [shopName, setShopName] = useState<string>('');
 
@@ -54,8 +55,14 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
   console.log('[DashboardLayout] basePath:', basePath);
   console.log('[DashboardLayout] variant:', variant);
   console.log('[DashboardLayout] pathname:', pathname);
-  console.log('[DashboardLayout] host param:', searchParams.get('host'));
+  console.log('[DashboardLayout] host param:', hostParam);
   console.log('[DashboardLayout] isEmbeddedInShopify:', isEmbeddedInShopify);
+
+  const withHostParam = (path: string) => {
+    if (!hostParam) return path;
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}host=${encodeURIComponent(hostParam)}`;
+  };
   // Embedded in Shopify: no sidebar; nested path appears in the store's admin title bar via App Bridge
   if (variant === 'embedded' && isEmbeddedInShopify) {
     return (
@@ -91,7 +98,7 @@ function DashboardLayoutInner({ children, basePath = '/app', variant = 'embedded
       {navItems.map((item) => (
         <Navigation.Item
           key={item.path}
-          url={basePath + item.path}
+          url={withHostParam(basePath + item.path)}
           label={item.label}
           icon={item.icon}
         />

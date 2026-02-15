@@ -75,6 +75,7 @@ export default function EmbeddedShopifyTitleBar({ basePath, navItems }: Embedded
     const container = containerRef.current;
     const existing = document.querySelector('script[data-api-key][src*="app-bridge"]');
     if (!existing) return;
+    const hostParam = searchParams.get('host');
 
     const PageComponent = document.createElement('s-page');
     PageComponent.setAttribute('heading', pageTitle);
@@ -82,7 +83,11 @@ export default function EmbeddedShopifyTitleBar({ basePath, navItems }: Embedded
     const breadcrumbSlot = document.createElement('div');
     breadcrumbSlot.slot = 'breadcrumb-actions';
     const homeLink = document.createElement('a');
-    homeLink.href = basePath + '/dashboard';
+    if (hostParam) {
+      homeLink.href = `${basePath}/dashboard?host=${encodeURIComponent(hostParam)}`;
+    } else {
+      homeLink.href = basePath + '/dashboard';
+    }
     homeLink.textContent = APP_TITLE;
     breadcrumbSlot.appendChild(homeLink);
     PageComponent.appendChild(breadcrumbSlot);
