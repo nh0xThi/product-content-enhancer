@@ -1,34 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireUser } from '@/lib/access';
+import { requireUser, getAccessibleStoreIds, requireStoreAccess } from '@/lib/access';
 
 // GET - List all jobs
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const storeId = searchParams.get('storeId');
+    const storeIdParam = searchParams.get('storeId');
 
-    const user = await requireUser(request);
-    if (!user) {
+    const storeIds = await getAccessibleStoreIds(request);
+    if (!storeIds || storeIds.length === 0) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const memberships = await prisma.userStore.findMany({
-      where: { userId: user.id },
-      select: { storeId: true },
-    });
-    const storeIds = memberships.map((m) => m.storeId);
-    if (storeIds.length === 0) {
-      return NextResponse.json({ jobs: [] });
-    }
-
-    const scopedStoreIds = storeId
-      ? storeIds.includes(storeId)
-        ? [storeId]
+    const scopedStoreIds = storeIdParam
+      ? storeIds.includes(storeIdParam)
+        ? [storeIdParam]
         : []
       : storeIds;
-
     if (scopedStoreIds.length === 0) {
       return NextResponse.json({ jobs: [] });
     }
@@ -63,21 +53,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await requireUser(request);
-    if (!user) {
+    const access = await requireStoreAccess(request, storeId);
+    if (!access) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const membership = await prisma.userStore.findUnique({
-      where: {
-        userId_storeId: {
-          userId: user.id,
-          storeId,
-        },
-      },
-    });
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const job = await prisma.job.create({

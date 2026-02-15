@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppBasePath } from '@/context/AppBasePathContext';
 import {
@@ -91,30 +91,52 @@ function GeneratePageContent() {
     }
   };
 
+  const loadStores = useCallback(async () => {
+    setFetchError(null);
+    try {
+      const shopParam = searchParams.get('shop');
+      const url = shopParam ? `/api/stores?shop=${encodeURIComponent(shopParam)}` : '/api/stores';
+      const res = await fetchWithSessionToken(url);
+      if (!res.ok) throw new Error('Failed to load stores');
+      const data = await res.json();
+      const mappedStores = (data.stores || []).map((store: Store) => ({
+        ...store,
+        description: getStoredDescription(store.id),
+      }));
+      setStores(mappedStores);
+      if (mappedStores.length > 0) {
+        setSelectedStore(mappedStores[0].id);
+        setSelectedStoreDescription(mappedStores[0].description || '');
+      }
+      return mappedStores.length;
+    } catch (err) {
+      console.error('Stores fetch error:', err);
+      setFetchError(err instanceof Error ? err.message : 'Failed to load stores');
+      return 0;
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     setIsInIframe(typeof window !== 'undefined' && window.top !== window.self);
-    setFetchError(null);
-    fetchWithSessionToken('/api/stores')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load stores');
-        return res.json();
-      })
-      .then((data) => {
-        const mappedStores = (data.stores || []).map((store: Store) => ({
-          ...store,
-          description: getStoredDescription(store.id),
-        }));
-        setStores(mappedStores);
-        if (mappedStores.length > 0) {
-          setSelectedStore(mappedStores[0].id);
-          setSelectedStoreDescription(mappedStores[0].description || '');
-        }
-      })
-      .catch((err) => {
-        console.error('Stores fetch error:', err);
-        setFetchError(err instanceof Error ? err.message : 'Failed to load stores');
-      });
+  }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const count = await loadStores();
+      if (cancelled) return;
+      // Embedded: retry once after delay if no stores (App Bridge / session may not be ready yet)
+      if (basePath === '/app' && count === 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+        if (cancelled) return;
+        await loadStores();
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [loadStores, basePath]);
+
+  useEffect(() => {
     fetchTemplates();
   }, []);
 
@@ -732,20 +754,30 @@ function GeneratePageContent() {
               <Card>
                 <BlockStack gap="500">
                   <Text as="h2" variant="headingLg">Select product</Text>
-                  <Text as="p" tone="subdued">Choose a store, fetch products, then select a product to enhance.</Text>
+                  <Text as="p" tone="subdued">
+                    {isEmbedded
+                      ? 'Fetch products from your store, then select a product to enhance.'
+                      : 'Choose a store, fetch products, then select a product to enhance.'}
+                  </Text>
                   <InlineStack gap="300" blockAlign="end" wrap>
                     {isEmbedded ? (
                       <>
-                        <Box minWidth="220px">
-                          <Select
-                            label="Store"
-                            labelInline
-                            disabled
-                            options={stores.map((s) => ({ label: `${s.name} (${s.shop})`, value: s.id }))}
-                            value={selectedStore}
-                            onChange={() => {}}
-                          />
-                        </Box>
+                        {stores.length === 1 ? (
+                          <InlineStack gap="200" blockAlign="center">
+                            <Text as="span" variant="bodyMd" fontWeight="medium">
+                              {stores[0].name} ({stores[0].shop})
+                            </Text>
+                          </InlineStack>
+                        ) : stores.length === 0 ? (
+                          fetchError ? (
+                            <InlineStack gap="200" blockAlign="center">
+                              <Text as="span" tone="critical">Could not load store. </Text>
+                              <Button size="slim" onClick={() => loadStores()}>Retry</Button>
+                            </InlineStack>
+                          ) : (
+                            <Text as="span" tone="subdued">Connecting to your store…</Text>
+                          )
+                        ) : null}
                         <Button
                           variant="primary"
                           loading={loading}

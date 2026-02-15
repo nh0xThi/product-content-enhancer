@@ -16,5 +16,6 @@ export const fetchWithSessionToken = async (input: RequestInfo, options: FetchOp
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  return fetch(input, { ...options, headers });
+  // Include credentials so session cookie is sent (needed when embedded iframe, Bearer token may not be ready yet)
+  return fetch(input, { ...options, headers, credentials: 'include' });
 };

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   FileText,
   Eye,
@@ -30,6 +31,7 @@ import type { IndexTableProps } from '@shopify/polaris';
 import { StructureEditor } from '@/components/StructureEditor';
 import { StructurePreview } from '@/components/StructurePreview';
 import { useNotify } from '@/context/NotifyContext';
+import { useAppBasePath } from '@/context/AppBasePathContext';
 import { fetchWithSessionToken } from '@/lib/shopifyFetch';
 
 interface Store {
@@ -54,7 +56,11 @@ interface Job {
   updatedAt: string;
 }
 
-export default function JobsPage() {
+function JobsPageContent() {
+  const searchParams = useSearchParams();
+  const basePath = useAppBasePath();
+  const [isInIframe, setIsInIframe] = useState(false);
+  const isEmbedded = basePath === '/app' && (Boolean(searchParams.get('host')) || isInIframe);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState<Store[]>([]);
@@ -84,12 +90,18 @@ export default function JobsPage() {
   }, [statusFilter, selectedStoreId]);
 
   useEffect(() => {
+    setIsInIframe(typeof window !== 'undefined' && window.top !== window.self);
+  }, []);
+
+  useEffect(() => {
     fetchStores();
   }, []);
 
   const fetchStores = async () => {
     try {
-      const response = await fetchWithSessionToken('/api/stores');
+      const shopParam = searchParams.get('shop');
+      const url = shopParam ? `/api/stores?shop=${encodeURIComponent(shopParam)}` : '/api/stores';
+      const response = await fetchWithSessionToken(url);
       const data = await response.json();
       const activeStores = (data.stores || []).filter((store: Store) => store.status === 'active');
       setStores(activeStores);
@@ -108,7 +120,7 @@ export default function JobsPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (selectedStoreId) params.set('storeId', selectedStoreId);
       const url = params.toString() ? `/api/jobs?${params.toString()}` : '/api/jobs';
-      const response = await fetch(url);
+      const response = await fetchWithSessionToken(url);
       const data = await response.json();
       setJobs(data.jobs || []);
     } catch (error) {
@@ -158,7 +170,7 @@ export default function JobsPage() {
     setImportingJobIds((prev) => new Set(Array.from(prev).concat(jobIds)));
 
     try {
-      const response = await fetch('/api/jobs/import', {
+      const response = await fetchWithSessionToken('/api/jobs/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId: selectedStoreId, jobIds }),
@@ -226,7 +238,7 @@ export default function JobsPage() {
     setUndoingJobIds((prev) => new Set(Array.from(prev).concat(jobIds)));
 
     try {
-      const response = await fetch('/api/jobs/undo', {
+      const response = await fetchWithSessionToken('/api/jobs/undo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId: selectedStoreId, jobIds }),
@@ -323,7 +335,7 @@ export default function JobsPage() {
     if (!confirm('Are you sure you want to delete this job?')) return;
 
     try {
-      const response = await fetch(`/api/jobs/${jobId}`, {
+      const response = await fetchWithSessionToken(`/api/jobs/${jobId}`, {
         method: 'DELETE',
       });
 
@@ -377,7 +389,7 @@ export default function JobsPage() {
           products: updatedProducts,
         };
 
-        const response = await fetch(`/api/jobs/${selectedJob.id}`, {
+        const response = await fetchWithSessionToken(`/api/jobs/${selectedJob.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -403,7 +415,7 @@ export default function JobsPage() {
     }
 
     try {
-      const response = await fetch(`/api/jobs/${selectedJob.id}`, {
+      const response = await fetchWithSessionToken(`/api/jobs/${selectedJob.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -461,7 +473,7 @@ export default function JobsPage() {
 
   const refreshSelectedJob = async (jobId: string) => {
     try {
-      const response = await fetch(`/api/jobs/${jobId}`);
+      const response = await fetchWithSessionToken(`/api/jobs/${jobId}`);
       if (!response.ok) return;
       const data = await response.json();
       if (!data?.job) return;
@@ -505,7 +517,7 @@ export default function JobsPage() {
     const key = `${job.id}:${item.productId}`;
     setImportingBatchItemIds((prev) => new Set(Array.from(prev).concat(key)));
     try {
-      const response = await fetch('/api/jobs/batch-item/import', {
+      const response = await fetchWithSessionToken('/api/jobs/batch-item/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -546,7 +558,7 @@ export default function JobsPage() {
     const key = `${job.id}:${item.productId}`;
     setUndoingBatchItemIds((prev) => new Set(Array.from(prev).concat(key)));
     try {
-      const response = await fetch('/api/jobs/batch-item/undo', {
+      const response = await fetchWithSessionToken('/api/jobs/batch-item/undo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1288,19 +1300,27 @@ export default function JobsPage() {
                     />
                   </div>
                   <Box minWidth="220px">
-                    <Select
-                      label="Store"
-                      labelInline
-                      options={[
-                        { label: 'Select a store', value: '' },
-                        ...stores.map((store) => ({
-                          label: `${store.name || store.shop} (${store.shop})`,
-                          value: store.id,
-                        })),
-                      ]}
-                      value={selectedStoreId}
-                      onChange={setSelectedStoreId}
-                    />
+                    {isEmbedded && stores.length === 1 ? (
+                      <InlineStack gap="200" blockAlign="center">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">
+                          {stores[0].name || stores[0].shop}
+                        </Text>
+                      </InlineStack>
+                    ) : (
+                      <Select
+                        label="Store"
+                        labelInline
+                        options={[
+                          { label: 'Select a store', value: '' },
+                          ...stores.map((store) => ({
+                            label: `${store.name || store.shop} (${store.shop})`,
+                            value: store.id,
+                          })),
+                        ]}
+                        value={selectedStoreId}
+                        onChange={setSelectedStoreId}
+                      />
+                    )}
                   </Box>
                   <InlineStack gap="200" blockAlign="end">
                     <Button
@@ -1400,5 +1420,13 @@ export default function JobsPage() {
         </Layout.Section>
       </Layout>
     </Page>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading…</div>}>
+      <JobsPageContent />
+    </Suspense>
   );
 }

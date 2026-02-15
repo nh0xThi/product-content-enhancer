@@ -10,8 +10,11 @@ export async function GET(request: Request) {
     if (tokenMatch) {
       const verified = verifyShopifySessionToken(tokenMatch[1]);
       if (verified) {
+        const shopDomain = verified.shop.includes('.myshopify.com')
+          ? verified.shop
+          : `${verified.shop.replace(/\.myshopify\.com$/i, '')}.myshopify.com`;
         const store = await prisma.store.findUnique({
-          where: { shop: verified.shop },
+          where: { shop: shopDomain },
         });
         if (!store || store.status !== 'active') {
           return NextResponse.json({ stores: [] });
@@ -33,6 +36,34 @@ export async function GET(request: Request) {
     const user = await requireUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Fallback for embedded: shop from URL when session exists (verify membership)
+    const url = new URL(request.url);
+    const shopParam = url.searchParams.get('shop');
+    if (shopParam) {
+      const shopDomain = shopParam.includes('.myshopify.com')
+        ? shopParam
+        : `${shopParam.replace(/\.myshopify\.com$/i, '')}.myshopify.com`;
+      const store = await prisma.store.findUnique({
+        where: { shop: shopDomain },
+        include: {
+          memberships: { where: { userId: user.id }, take: 1 },
+        },
+      });
+      if (store && store.status === 'active' && store.memberships.length > 0) {
+        return NextResponse.json({
+          stores: [
+            {
+              id: store.id,
+              shop: store.shop,
+              name: store.name || store.shop.replace('.myshopify.com', ''),
+              connectedAt: store.connectedAt.toISOString(),
+              status: store.status as 'active' | 'inactive',
+            },
+          ],
+        });
+      }
     }
 
     const stores = await prisma.store.findMany({
